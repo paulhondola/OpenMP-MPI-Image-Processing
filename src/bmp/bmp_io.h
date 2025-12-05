@@ -2,8 +2,6 @@
 #define __BMP_IO_H__
 
 #include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
 
 /* Data structures for representing BMP images in memory */
 

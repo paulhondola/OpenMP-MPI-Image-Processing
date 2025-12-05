@@ -1,9 +1,21 @@
 #include "convolution.h"
+#include <stdlib.h>
 
 void clamp_pixel(Pixel *p, double r, double g, double b) {
   p->r = (unsigned char)(r < 0 ? 0 : (r > 255 ? 255 : r));
   p->g = (unsigned char)(g < 0 ? 0 : (g > 255 ? 255 : g));
   p->b = (unsigned char)(b < 0 ? 0 : (b > 255 ? 255 : b));
+}
+
+void clamp_to_boundary(int *px, int *py, int width, int height) {
+  if (*px < 0)
+    *px = 0;
+  if (*px >= width)
+    *px = width - 1;
+  if (*py < 0)
+    *py = 0;
+  if (*py >= height)
+    *py = height - 1;
 }
 
 int convolve(Image *img, Kernel kernel) {
@@ -26,15 +38,7 @@ int convolve(Image *img, Kernel kernel) {
           int py = y + ky - half_k;
           int px = x + kx - half_k;
 
-          // Clamp to boundary
-          if (px < 0)
-            px = 0;
-          if (px >= width)
-            px = width - 1;
-          if (py < 0)
-            py = 0;
-          if (py >= height)
-            py = height - 1;
+          clamp_to_boundary(&px, &py, width, height);
 
           Pixel p = img->data[py * width + px];
           double k_val = kernel.data[ky * k_size + kx];

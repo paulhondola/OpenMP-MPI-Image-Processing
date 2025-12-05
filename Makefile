@@ -1,23 +1,5 @@
-setup:
-	@echo "Setting up the project..."
-	mkdir -p docs
-	mkdir -p src
-	mkdir -p bin
-	mkdir -p data
-	mkdir -p images
-	mkdir -p images/base
-	mkdir -p images/edge
-	mkdir -p images/ridge
-	mkdir -p images/sharpen
-	mkdir -p images/boxblur
-	mkdir -p images/gaussblur3
-	mkdir -p images/gaussblur5
-	mkdir -p images/unsharp5
-	mkdir -p images/test
-	@echo "Done."
-
-CLUSTERS = 2
-THREADS = 4
+CLUSTERS = 1
+THREADS = 10
 CC = mpicc
 RUN = mpirun
 UNAME_S := $(shell uname -s)
@@ -37,8 +19,42 @@ BIN = bin/main
 
 run:
 	$(CC) $(CFLAGS) $(SRC) -o $(BIN)
-	$(RUN) -n $(CLUSTERS) $(BIN) $(THREADS) images/base/Large.bmp images/boxblur/serial/Large.bmp
-	$(RUN) -n $(CLUSTERS) $(BIN) $(THREADS) images/base/XL.bmp images/boxblur/serial/XL.bmp
-	$(RUN) -n $(CLUSTERS) $(BIN) $(THREADS) images/base/XXL.bmp images/boxblur/serial/XXL.bmp
+	$(RUN) -n $(CLUSTERS) $(BIN) $(THREADS)
+
+clean:
+	find images -mindepth 1 -maxdepth 1 -not -name 'base' -exec rm -rf {} +
+	rm -f $(BIN)
+
+setup:
+	@echo "Setting up the project..."
+	mkdir -p docs
+	mkdir -p src
+	mkdir -p bin
+	mkdir -p data
+	mkdir -p images
+	mkdir -p images/base
+	mkdir -p images/edge
+	mkdir -p images/edge/serial
+	mkdir -p images/edge/parallel
+	mkdir -p images/ridge
+	mkdir -p images/ridge/serial
+	mkdir -p images/ridge/parallel
+	mkdir -p images/sharpen
+	mkdir -p images/sharpen/serial
+	mkdir -p images/sharpen/parallel
+	mkdir -p images/boxblur
+	mkdir -p images/boxblur/serial
+	mkdir -p images/boxblur/parallel
+	mkdir -p images/gaussblur3
+	mkdir -p images/gaussblur3/serial
+	mkdir -p images/gaussblur3/parallel
+	mkdir -p images/gaussblur5
+	mkdir -p images/gaussblur5/serial
+	mkdir -p images/gaussblur5/parallel
+	mkdir -p images/unsharp5
+	mkdir -p images/unsharp5/serial
+	mkdir -p images/unsharp5/parallel
+	mkdir -p images/test
+	@echo "Done."
 
 .PHONY: setup run
