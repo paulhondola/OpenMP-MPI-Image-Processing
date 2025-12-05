@@ -7,7 +7,16 @@
 
 /* Data structures for representing BMP images in memory */
 
-typedef struct Image Image;
+typedef struct {
+  unsigned char r, g, b;
+} RGB; // one RGB point
+
+struct Image {
+  int width;
+  int height;
+  RGB *data;
+}; // a BMP image as an array of RGB points
+
 /* Read BMP file, build and return Image struct */
 Image *readBMP(const char *filename);
 

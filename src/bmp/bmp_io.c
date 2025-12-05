@@ -1,21 +1,9 @@
-
+#include "bmp_io.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
 /* Data structures for representing BMP images in memory */
-
-typedef unsigned char uchar;
-
-typedef struct {
-  uchar r, g, b;
-} RGB; // one RGB point
-
-struct Image {
-  int width;
-  int height;
-  RGB *data;
-}; // a BMP image as an array of RGB points
 
 /* Read BMP file, build and return Image struct */
 struct Image *readBMP(const char *filename) {
