@@ -1,3 +1,4 @@
+#include "bmp/bmp_io.h"
 #include <mpi.h>
 #include <omp.h>
 #include <stdio.h>
@@ -12,8 +13,7 @@ void get_args(int argc, char **argv, int *threads) {
   *threads = atoi(argv[1]);
 }
 
-int main(int argc, char **argv) {
-
+void test_mpi(int argc, char **argv) {
   int total_threads, thread_rank;
   int pid, np;
   get_args(argc, argv, &total_threads);
@@ -24,7 +24,7 @@ int main(int argc, char **argv) {
   MPI_Init_thread(&argc, &argv, MPI_THREAD_FUNNELED, &provided);
   if (provided < MPI_THREAD_FUNNELED) {
     MPI_Abort(MPI_COMM_WORLD, 1);
-    return 1;
+    return;
   }
 
   MPI_Comm_rank(MPI_COMM_WORLD, &pid);
@@ -42,5 +42,30 @@ int main(int argc, char **argv) {
   }
   MPI_Barrier(MPI_COMM_WORLD);
   MPI_Finalize();
+}
+
+int main(int argc, char **argv) {
+
+  Image *img = read_BMP("images/base/Large.bmp");
+
+  if (!img) {
+    printf("Error: Could not open file Large.bmp\n");
+    return 2;
+  }
+
+  FILE *fp = fopen("images/log/log.txt", "w");
+
+  if (!fp) {
+    printf("Error: Could not open file log.txt\n");
+    return 2;
+  }
+
+  print_BMP_header(img, fp);
+  print_BMP_pixels(img, fp);
+
+  fclose(fp);
+
+  free_BMP(img);
+
   return 0;
 }

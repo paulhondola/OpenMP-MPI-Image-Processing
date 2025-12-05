@@ -3,8 +3,33 @@
 #include <stdlib.h>
 #include <string.h>
 
+Pixel *alloc_pixel(int width, int height) {
+  Pixel *data = (Pixel *)malloc(width * height * sizeof(Pixel));
+
+  if (!data) {
+    fprintf(stderr, "Error: Memory allocation failed for pixels\n");
+    return NULL;
+  }
+
+  return data;
+}
+
+Image *alloc_image(int width, int height, Pixel *data) {
+  Image *img = (Image *)malloc(sizeof(Image));
+
+  if (!img) {
+    fprintf(stderr, "Error: Memory allocation failed for image\n");
+    return NULL;
+  }
+
+  img->width = width;
+  img->height = height;
+  img->data = data;
+  return img;
+}
+
 /* Read BMP file, build and return Image struct */
-Image *readBMP(const char *filename) {
+Image *read_BMP(const char *filename) {
   FILE *f = fopen(filename, "rb");
   if (!f) {
     fprintf(stderr, "Error: Could not open file %s\n", filename);
@@ -36,7 +61,8 @@ Image *readBMP(const char *filename) {
 
   int row_padded = (width * 3 + 3) & (~3);
   unsigned char *row = (unsigned char *)malloc(row_padded);
-  Pixel *data = (Pixel *)malloc(width * height * sizeof(Pixel));
+
+  Pixel *data = alloc_pixel(width, height);
   if (!data || !row) {
     fprintf(stderr, "Error: Memory allocation failed\n");
     free(data);
@@ -57,15 +83,12 @@ Image *readBMP(const char *filename) {
   free(row);
   fclose(f);
 
-  Image *img = (Image *)malloc(sizeof(Image));
-  img->width = width;
-  img->height = height;
-  img->data = data;
+  Image *img = alloc_image(width, height, data);
   return img;
 }
 
 /* Save Image in file in BMP format */
-int saveBMP(const char *filename, const Image *img) {
+int save_BMP(const char *filename, const Image *img) {
   FILE *f = fopen(filename, "wb");
   if (!f) {
     fprintf(stderr, "Error: Could not create file %s\n", filename);
@@ -125,7 +148,34 @@ int saveBMP(const char *filename, const Image *img) {
   return 1;
 }
 
-/* Test program */
+void free_BMP(Image *img) {
+  free(img->data);
+  free(img);
+}
+
+void print_BMP_header(Image *img, FILE *fp) {
+  fprintf(fp, "Image header is width=%d  and height=%d \n", img->width,
+          img->height);
+}
+
+void print_pixel(Pixel pixel, FILE *fp) {
+  fprintf(fp, "(%u, %u, %u) ", pixel.r, pixel.g, pixel.b);
+}
+
+void print_BMP_pixel(Image *img, int x, int y, FILE *fp) {
+  print_pixel(img->data[y * img->width + x], fp);
+}
+
+void print_BMP_pixels(Image *img, FILE *fp) {
+  for (int y = 0; y < img->height; y++) {
+    for (int x = 0; x < img->width; x++) {
+      print_BMP_pixel(img, x, y, fp);
+    }
+    fprintf(fp, "\n");
+  }
+}
+
+/*
 int main(int argc, char **argv) {
   if (argc < 3) {
     fprintf(stderr, "Usage: %s input.bmp output.bmp\n", argv[0]);
@@ -138,7 +188,7 @@ int main(int argc, char **argv) {
   printf("Loading image from file %s \n", in_filename);
 
   // Read input
-  Image *img = readBMP(in_filename);
+  Image *img = read_BMP(in_filename);
   if (!img) {
     fprintf(stderr, "Error reading %s\n", in_filename);
     return 1;
@@ -159,7 +209,7 @@ int main(int argc, char **argv) {
     }
 
   // Save output
-  saveBMP(out_filename, img);
+  save_BMP(out_filename, img);
   printf("Modified image saved in file %s \n", out_filename);
 
   free(img->data);
@@ -167,3 +217,4 @@ int main(int argc, char **argv) {
 
   return 0;
 }
+*/

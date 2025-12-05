@@ -27,12 +27,17 @@ ifeq ($(UNAME_S),Darwin)
 else
 	OMP_FLAGS = -fopenmp
 endif
+
 ERROR_FLAGS = -Wall -Wextra
-PERFORMANCE_FLAGS = -O3 -ffast-math
+PERFORMANCE_FLAGS = -O3 -ffast-math -flto
 CFLAGS = $(OMP_FLAGS) $(ERROR_FLAGS) $(PERFORMANCE_FLAGS)
 
-SRC = src/bmp/bmp_io.c
-BIN = bin/bmp_io
+SRC = $(shell find src -name "*.c")
+BIN = bin/main
+
+run:
+	$(CC) $(CFLAGS) $(SRC) -o $(BIN)
+	$(RUN) -n $(CLUSTERS) $(BIN) $(THREADS)
 
 test_bmp:
 	$(CC) $(CFLAGS) $(SRC) -o $(BIN)
@@ -41,7 +46,7 @@ test_bmp:
 	$(RUN) -n $(CLUSTERS) $(BIN) images/base/XXL.bmp images/test/XXL.bmp
 
 test_mpi_omp:
-	$(CC) $(CFLAGS) src/main.c -o bin/main
-	$(RUN) -n $(CLUSTERS) bin/main $(THREADS)
+	$(CC) $(CFLAGS) $(SRC) -o $(BIN)
+	$(RUN) -n $(CLUSTERS) $(BIN) $(THREADS)
 
 .PHONY: setup
