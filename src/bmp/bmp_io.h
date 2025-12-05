@@ -9,13 +9,13 @@
 
 typedef struct {
   unsigned char r, g, b;
-} RGB; // one RGB point
+} Pixel; // one RGB point
 
-struct Image {
+typedef struct {
   int width;
   int height;
-  RGB *data;
-}; // a BMP image as an array of RGB points
+  Pixel *data;
+} Image; // a BMP image as an array of RGB points
 
 /* Read BMP file, build and return Image struct */
 Image *readBMP(const char *filename);

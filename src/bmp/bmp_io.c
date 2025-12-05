@@ -3,10 +3,8 @@
 #include <stdlib.h>
 #include <string.h>
 
-/* Data structures for representing BMP images in memory */
-
 /* Read BMP file, build and return Image struct */
-struct Image *readBMP(const char *filename) {
+Image *readBMP(const char *filename) {
   FILE *f = fopen(filename, "rb");
   if (!f) {
     fprintf(stderr, "Error: Could not open file %s\n", filename);
@@ -38,7 +36,7 @@ struct Image *readBMP(const char *filename) {
 
   int row_padded = (width * 3 + 3) & (~3);
   unsigned char *row = (unsigned char *)malloc(row_padded);
-  RGB *data = (RGB *)malloc(width * height * sizeof(RGB));
+  Pixel *data = (Pixel *)malloc(width * height * sizeof(Pixel));
   if (!data || !row) {
     fprintf(stderr, "Error: Memory allocation failed\n");
     free(data);
@@ -59,7 +57,7 @@ struct Image *readBMP(const char *filename) {
   free(row);
   fclose(f);
 
-  struct Image *img = (struct Image *)malloc(sizeof(struct Image));
+  Image *img = (Image *)malloc(sizeof(Image));
   img->width = width;
   img->height = height;
   img->data = data;
@@ -67,7 +65,7 @@ struct Image *readBMP(const char *filename) {
 }
 
 /* Save Image in file in BMP format */
-int saveBMP(const char *filename, const struct Image *img) {
+int saveBMP(const char *filename, const Image *img) {
   FILE *f = fopen(filename, "wb");
   if (!f) {
     fprintf(stderr, "Error: Could not create file %s\n", filename);
@@ -114,7 +112,7 @@ int saveBMP(const char *filename, const struct Image *img) {
   // Write pixel data bottom-to-top
   for (int y = 0; y < height; y++) {
     for (int x = 0; x < width; x++) {
-      RGB pixel = img->data[(height - 1 - y) * width + x];
+      Pixel pixel = img->data[(height - 1 - y) * width + x];
       row[x * 3] = pixel.b;
       row[x * 3 + 1] = pixel.g;
       row[x * 3 + 2] = pixel.r;
@@ -140,7 +138,7 @@ int main(int argc, char **argv) {
   printf("Loading image from file %s \n", in_filename);
 
   // Read input
-  struct Image *img = readBMP(in_filename);
+  Image *img = readBMP(in_filename);
   if (!img) {
     fprintf(stderr, "Error reading %s\n", in_filename);
     return 1;
