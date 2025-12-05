@@ -37,16 +37,8 @@ BIN = bin/main
 
 run:
 	$(CC) $(CFLAGS) $(SRC) -o $(BIN)
-	$(RUN) -n $(CLUSTERS) $(BIN) $(THREADS)
+	$(RUN) -n $(CLUSTERS) $(BIN) $(THREADS) images/base/Large.bmp images/boxblur/serial/Large.bmp
+	$(RUN) -n $(CLUSTERS) $(BIN) $(THREADS) images/base/XL.bmp images/boxblur/serial/XL.bmp
+	$(RUN) -n $(CLUSTERS) $(BIN) $(THREADS) images/base/XXL.bmp images/boxblur/serial/XXL.bmp
 
-test_bmp:
-	$(CC) $(CFLAGS) $(SRC) -o $(BIN)
-	$(RUN) -n $(CLUSTERS) $(BIN) images/base/Large.bmp images/test/Large.bmp
-	$(RUN) -n $(CLUSTERS) $(BIN) images/base/XL.bmp images/test/XL.bmp
-	$(RUN) -n $(CLUSTERS) $(BIN) images/base/XXL.bmp images/test/XXL.bmp
-
-test_mpi_omp:
-	$(CC) $(CFLAGS) $(SRC) -o $(BIN)
-	$(RUN) -n $(CLUSTERS) $(BIN) $(THREADS)
-
-.PHONY: setup
+.PHONY: setup run

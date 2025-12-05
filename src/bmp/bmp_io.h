@@ -23,6 +23,10 @@ Image *read_BMP(const char *filename);
 /* Save Image in file in BMP format */
 int save_BMP(const char *filename, const Image *img);
 
+/* Allocators */
+Pixel *alloc_pixel(int width, int height);
+Image *alloc_image(int width, int height, Pixel *data);
+
 /* Free memory allocated for Image */
 void free_BMP(Image *img);
 

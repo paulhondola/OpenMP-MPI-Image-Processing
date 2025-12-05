@@ -1,69 +1,59 @@
 #include "bmp/bmp_io.h"
+#include "convolution/convolution.h"
+#include <limits.h>
 #include <mpi.h>
 #include <omp.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
+#include <sys/syslimits.h>
 
-void get_args(int argc, char **argv, int *threads) {
-  if (argc < 2) {
-    printf("Usage: mpirun -n <clusters> %s <threads>\n", argv[0]);
+void get_args(int argc, char **argv, int *threads, char *input_file,
+              char *output_file) {
+  if (argc < 4) {
+    printf(
+        "Usage: mpirun -n <clusters> %s <threads> <input_file> <output_file>\n",
+        argv[0]);
     exit(1);
   }
 
   *threads = atoi(argv[1]);
-}
-
-void test_mpi(int argc, char **argv) {
-  int total_threads, thread_rank;
-  int pid, np;
-  get_args(argc, argv, &total_threads);
-  omp_set_num_threads(total_threads);
-
-  int provided = 4;
-
-  MPI_Init_thread(&argc, &argv, MPI_THREAD_FUNNELED, &provided);
-  if (provided < MPI_THREAD_FUNNELED) {
-    MPI_Abort(MPI_COMM_WORLD, 1);
-    return;
-  }
-
-  MPI_Comm_rank(MPI_COMM_WORLD, &pid);
-  MPI_Comm_size(MPI_COMM_WORLD, &np);
-
-  printf("Sequental %d out of %d!\n", pid, np);
-  MPI_Barrier(MPI_COMM_WORLD);
-
-#pragma omp parallel default(none) private(thread_rank)                        \
-    shared(total_threads, pid, np)
-  {
-    thread_rank = omp_get_thread_num();
-    printf("parallel: %d out of %d from proc %d out of %d\n", thread_rank,
-           total_threads, pid, np);
-  }
-  MPI_Barrier(MPI_COMM_WORLD);
-  MPI_Finalize();
+  strcpy(input_file, argv[2]);
+  strcpy(output_file, argv[3]);
 }
 
 int main(int argc, char **argv) {
+  char input_file[PATH_MAX];
+  char output_file[PATH_MAX];
+  int total_threads = 0;
 
-  Image *img = read_BMP("images/base/Large.bmp");
+  get_args(argc, argv, &total_threads, input_file, output_file);
+
+  Image *img = read_BMP(input_file);
 
   if (!img) {
-    printf("Error: Could not open file Large.bmp\n");
+    printf("Error: Could not open file %s\n", input_file);
     return 2;
   }
 
-  FILE *fp = fopen("images/log/log.txt", "w");
+  int original_width = img->width;
+  int original_height = img->height;
 
-  if (!fp) {
-    printf("Error: Could not open file log.txt\n");
+  int result = convolve(img, BOXBLUR_KERNEL);
+
+  if (!result) {
+    printf("Error: Could not convolve image\n");
     return 2;
   }
 
-  print_BMP_header(img, fp);
-  print_BMP_pixels(img, fp);
+  int new_width = img->width;
+  int new_height = img->height;
 
-  fclose(fp);
+  printf("Pre convolution: width: %d , height: %d\n", original_width,
+         original_height);
+  printf("Post convolution: width: %d , height: %d\n", new_width, new_height);
+
+  save_BMP(output_file, img);
 
   free_BMP(img);
 
