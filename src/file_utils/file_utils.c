@@ -5,12 +5,13 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/stat.h>
+#include <sys/wait.h>
 #include <unistd.h>
 
 const char *CSV_HEADER = "Operation,Clusters,Threads,Serial Time,Parallel "
                          "Time,Speedup,Efficiency";
 
-app_error create_directory_recursive(const char *path) {
+app_error create_directory(const char *path) {
   if (path == NULL || strlen(path) == 0) {
     return ERR_INVALID_ARGS;
   }
@@ -20,48 +21,26 @@ app_error create_directory_recursive(const char *path) {
     return SUCCESS;
   }
 
-  char temp_path[PATH_MAX];
-  char current_path[PATH_MAX] = "";
-
-  strncpy(temp_path, path, PATH_MAX - 1);
-  temp_path[PATH_MAX - 1] = '\0';
-
-  char *token = strtok(temp_path, "/");
-  while (token != NULL) {
-    // Append token to current path
-    if (strlen(current_path) + strlen(token) + 2 >= PATH_MAX) {
-      fprintf(stderr, "Error: Path too long\n");
-      return ERR_PATH_TOO_LONG;
+  pid_t pid = fork();
+  if (pid == -1) {
+    perror("fork");
+    return ERR_DIR_CREATE;
+  } else if (pid == 0) {
+    execlp("mkdir", "mkdir", "-p", path, NULL);
+    perror("execlp");
+    _exit(EXIT_FAILURE);
+  } else {
+    int status;
+    if (waitpid(pid, &status, 0) == -1) {
+      perror("waitpid");
+      return ERR_DIR_CREATE;
     }
-
-    strcat(current_path, token);
-    strcat(current_path, "/");
-
-    // Create directory
-    if (mkdir(current_path, 0755) != 0) {
-      if (errno != EEXIST) {
-        perror("Error creating directory");
-        return ERR_DIR_CREATE;
-      } else {
-        struct stat s;
-        // Remove trailing slash for stat
-        current_path[strlen(current_path) - 1] = '\0';
-        if (stat(current_path, &s) == 0) {
-          if (!S_ISDIR(s.st_mode)) {
-            fprintf(stderr, "Error: '%s' exists but is not a directory\n",
-                    current_path);
-            return ERR_NOT_A_DIR;
-          }
-        }
-        // Restore slash
-        strcat(current_path, "/");
-      }
+    if (WIFEXITED(status) && WEXITSTATUS(status) == 0) {
+      return SUCCESS;
+    } else {
+      return ERR_DIR_CREATE;
     }
-
-    token = strtok(NULL, "/");
   }
-
-  return SUCCESS;
 }
 
 app_error init_benchmark_csv(const char *filename) {
@@ -72,8 +51,17 @@ app_error init_benchmark_csv(const char *filename) {
   }
 
   // Check if file is empty
-  fseek(fp, 0, SEEK_END);
+  if (fseek(fp, 0, SEEK_END) != 0) {
+    perror("Error seeking to end of CSV file");
+    fclose(fp);
+    return ERR_FILE_IO;
+  }
   long size = ftell(fp);
+  if (size == -1L) {
+    perror("Error telling position in CSV file");
+    fclose(fp);
+    return ERR_FILE_IO;
+  }
 
   // If file is empty, write csv header
   if (size == 0) {

@@ -6,7 +6,10 @@
 /**
  * Initializes the benchmark CSV file with headers if it doesn't exist.
  * @param filename Name of the CSV file
- * @return app_error code (SUCCESS on success)
+ * @return app_error code:
+ *         - SUCCESS: File initialized successfully
+ *         - ERR_FILE_OPEN: Could not open file
+ *         - ERR_FILE_IO: Error seeking or telling file position
  */
 app_error init_benchmark_csv(const char *filename);
 
@@ -19,7 +22,9 @@ app_error init_benchmark_csv(const char *filename);
  * @param threads Number of threads
  * @param serial_time Time taken for serial execution
  * @param parallel_time Time taken for parallel execution
- * @return app_error code (SUCCESS on success)
+ * @return app_error code:
+ *         - SUCCESS: Result appended successfully
+ *         - ERR_FILE_OPEN: Could not open file for appending
  */
 app_error append_benchmark_result(const char *filename, const char *operation,
                                   int clusters, int threads, double serial_time,
@@ -29,8 +34,11 @@ app_error append_benchmark_result(const char *filename, const char *operation,
  * Recursively creates directories for the given path.
  * Splits input path into tokens by "/" and creates directories for every token.
  * @param path Path to the directory
- * @return app_error code (SUCCESS on success)
+ * @return app_error code:
+ *         - SUCCESS: Directory created successfully or already exists
+ *         - ERR_INVALID_ARGS: Path is NULL or empty
+ *         - ERR_DIR_CREATE: failed to create directory (fork/exec/mkdir failed)
  */
-app_error create_directory_recursive(const char *path);
+app_error create_directory(const char *path);
 
 #endif

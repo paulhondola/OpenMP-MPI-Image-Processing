@@ -44,19 +44,19 @@ app_error create_directories(void) {
 
     // Create kernel folder
     snprintf(path, sizeof(path), "%s", folder);
-    if (create_directory_recursive(path) != SUCCESS) {
+    if (create_directory(path) != SUCCESS) {
       return ERR_DIR_CREATE;
     }
 
     // Create serial folder
     snprintf(path, sizeof(path), "%s/%s", folder, SERIAL_FOLDER);
-    if (create_directory_recursive(path) != SUCCESS) {
+    if (create_directory(path) != SUCCESS) {
       return ERR_DIR_CREATE;
     }
 
     // Create parallel folder
     snprintf(path, sizeof(path), "%s/%s", folder, PARALLEL_FOLDER);
-    if (create_directory_recursive(path) != SUCCESS) {
+    if (create_directory(path) != SUCCESS) {
       return ERR_DIR_CREATE;
     }
   }

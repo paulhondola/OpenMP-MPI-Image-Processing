@@ -4,6 +4,8 @@ const char *get_error_string(app_error err) {
   switch (err) {
   case SUCCESS:
     return "Success";
+  case ERR_FILE_IO:
+    return "Error with file IO";
   case ERR_FILE_OPEN:
     return "Error opening file";
   case ERR_FILE_READ:

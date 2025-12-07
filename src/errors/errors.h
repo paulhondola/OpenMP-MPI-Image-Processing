@@ -3,7 +3,8 @@
 
 typedef enum {
   SUCCESS = 0,
-  ERR_FILE_OPEN = 1,
+  ERR_FILE_IO = 1,
+  ERR_FILE_OPEN,
   ERR_FILE_READ,
   ERR_FILE_WRITE,
   ERR_MEM_ALLOC,

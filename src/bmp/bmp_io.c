@@ -66,8 +66,7 @@ app_error read_BMP(const char *filename, Image **img) {
   if (!data || !row) {
     fprintf(stderr, "Error: Memory allocation failed\n");
     if (data)
-      free(data); // alloc_pixel might return null but technically data is null
-                  // if !data
+      free(data);
     if (row)
       free(row);
     fclose(f);
@@ -181,47 +180,3 @@ void print_BMP_pixels(Image *img, FILE *fp) {
     fprintf(fp, "\n");
   }
 }
-
-/*
-int main(int argc, char **argv) {
-  if (argc < 3) {
-    fprintf(stderr, "Usage: %s input.bmp output.bmp\n", argv[0]);
-    return 1;
-  }
-
-  const char *in_filename = argv[1];
-  const char *out_filename = argv[2];
-
-  printf("Loading image from file %s \n", in_filename);
-
-  // Read input
-  Image *img = read_BMP(in_filename);
-  if (!img) {
-    fprintf(stderr, "Error reading %s\n", in_filename);
-    return 1;
-  }
-
-  int width = img->width;
-  int height = img->height;
-
-  printf("Image size is width=%d  and height=%d \n", width, height);
-
-  // Transform image - draw a horizontal black line in the middle of the image
-  int thickness = height / 10;
-  for (int i = height / 2 - thickness; i <= height / 2 + thickness; i++)
-    for (int j = 0; j < width; j++) {
-      img->data[i * width + j].r = 0;
-      img->data[i * width + j].g = 0;
-      img->data[i * width + j].b = 0;
-    }
-
-  // Save output
-  save_BMP(out_filename, img);
-  printf("Modified image saved in file %s \n", out_filename);
-
-  free(img->data);
-  free(img);
-
-  return 0;
-}
-*/
