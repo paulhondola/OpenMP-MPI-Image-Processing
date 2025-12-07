@@ -55,6 +55,12 @@ setup:
 	mkdir -p images/unsharp5/serial
 	mkdir -p images/unsharp5/parallel
 	mkdir -p images/test
+	mkdir -p data/times
+	mkdir -p data/times/serial
+	mkdir -p data/times/parallel
+	mkdir -p data/plots
+	mkdir -p data/plots/serial
+	mkdir -p data/plots/parallel
 	@echo "Done."
 
 .PHONY: setup run

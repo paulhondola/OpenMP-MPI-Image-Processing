@@ -2,8 +2,9 @@
 #define __CONVOLUTION_H__
 
 #include "../bmp/bmp_io.h"
+#include "../errors/errors.h"
 #include "../kernel/kernel.h"
 
-int convolve(Image *img, Kernel kernel);
+app_error convolve(Image *img, Kernel kernel);
 
 #endif

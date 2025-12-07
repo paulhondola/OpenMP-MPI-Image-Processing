@@ -1,6 +1,7 @@
 #ifndef __BMP_IO_H__
 #define __BMP_IO_H__
 
+#include "../errors/errors.h"
 #include <stdio.h>
 
 /* Data structures for representing BMP images in memory */
@@ -15,11 +16,11 @@ typedef struct {
   Pixel *data;
 } Image; // a BMP image as an array of RGB points
 
-/* Read BMP file, build and return Image struct */
-Image *read_BMP(const char *filename);
+/* Read BMP file, build and return Image struct via pointer */
+app_error read_BMP(const char *filename, Image **img);
 
 /* Save Image in file in BMP format */
-int save_BMP(const char *filename, const Image *img);
+app_error save_BMP(const char *filename, const Image *img);
 
 /* Allocators */
 Pixel *alloc_pixel(int width, int height);

@@ -18,17 +18,19 @@ void clamp_to_boundary(int *px, int *py, int width, int height) {
     *py = height - 1;
 }
 
-int convolve(Image *img, Kernel kernel) {
+app_error convolve(Image *img, Kernel kernel) {
   int width = img->width;
   int height = img->height;
   int k_size = kernel.size;
   int half_k = k_size / 2;
 
+  // Allocate memory for output
   Pixel *output = alloc_pixel(width, height);
   if (!output) {
-    return 0;
+    return ERR_MEM_ALLOC;
   }
 
+  // Convolve
   for (int y = 0; y < height; y++) {
     for (int x = 0; x < width; x++) {
       double r_acc = 0, g_acc = 0, b_acc = 0;
@@ -49,6 +51,7 @@ int convolve(Image *img, Kernel kernel) {
         }
       }
 
+      // Clamp values to valid range
       Pixel out_p;
       clamp_pixel(&out_p, r_acc, g_acc, b_acc);
       output[y * width + x] = out_p;
@@ -59,5 +62,5 @@ int convolve(Image *img, Kernel kernel) {
   free(img->data);
   img->data = output;
 
-  return 1;
+  return SUCCESS;
 }
