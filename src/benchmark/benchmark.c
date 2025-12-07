@@ -79,21 +79,24 @@ app_error run_benchmark_kernel(const char *input_path, const char *img_name,
   }
 
   // 2. Convolve
-  if (convolve(img, *bk.kernel_ptr) != SUCCESS) {
-    fprintf(stderr, "\t\tError: Convolution failed for %s on %s\n", bk.name,
-            img_name);
+  app_error conv_err = convolve(img, *bk.kernel_ptr);
+  if (conv_err != SUCCESS) {
+    fprintf(stderr, "\t\tError: Convolution failed for %s on %s: %s\n", bk.name,
+            img_name, get_error_string(conv_err));
     free_BMP(img);
-    return ERR_CONVOLUTION;
+    return conv_err;
   }
 
   // 3. Save
   char output_path[PATH_MAX];
   snprintf(output_path, PATH_MAX, "%s/%s/%s", bk.folder, SERIAL_FOLDER,
            img_name);
-  if (save_BMP(output_path, img) != SUCCESS) {
-    fprintf(stderr, "\t\tError: Could not save to %s\n", output_path);
+  app_error save_err = save_BMP(output_path, img);
+  if (save_err != SUCCESS) {
+    fprintf(stderr, "\t\tError: Could not save to %s: %s\n", output_path,
+            get_error_string(save_err));
     free_BMP(img);
-    return ERR_FILE_WRITE;
+    return save_err;
   }
 
   printf("\t\tSaved to: %s\n", output_path);
