@@ -1,46 +1,20 @@
 #include "file_utils.h"
 #include <errno.h>
-#include <limits.h>
 #include <stdio.h>
-#include <stdlib.h>
 #include <string.h>
 #include <sys/stat.h>
-#include <sys/wait.h>
-#include <unistd.h>
 
 const char *CSV_HEADER = "Operation,Clusters,Threads,Serial Time,Parallel "
                          "Time,Speedup,Efficiency";
 
 app_error create_directory(const char *path) {
-  if (path == NULL || strlen(path) == 0) {
-    return ERR_INVALID_ARGS;
-  }
-
-  struct stat st;
-  if (stat(path, &st) == 0 && S_ISDIR(st.st_mode)) {
-    return SUCCESS;
-  }
-
-  pid_t pid = fork();
-  if (pid == -1) {
-    perror("fork");
-    return ERR_DIR_CREATE;
-  } else if (pid == 0) {
-    execlp("mkdir", "mkdir", "-p", path, NULL);
-    perror("execlp");
-    _exit(EXIT_FAILURE);
-  } else {
-    int status;
-    if (waitpid(pid, &status, 0) == -1) {
-      perror("waitpid");
-      return ERR_DIR_CREATE;
-    }
-    if (WIFEXITED(status) && WEXITSTATUS(status) == 0) {
-      return SUCCESS;
-    } else {
+  if (mkdir(path, 0777) == -1) {
+    if (errno != EEXIST) {
+      perror("mkdir");
       return ERR_DIR_CREATE;
     }
   }
+  return SUCCESS;
 }
 
 app_error init_benchmark_csv(const char *filename) {

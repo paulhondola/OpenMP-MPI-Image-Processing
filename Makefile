@@ -1,4 +1,4 @@
-CLUSTERS = 2
+CLUSTERS = 1
 THREADS = 4
 CC = mpicc
 RUN = mpirun
@@ -37,28 +37,6 @@ setup:
 	mkdir -p data
 	mkdir -p images
 	mkdir -p images/base
-	mkdir -p images/edge
-	mkdir -p images/edge/serial
-	mkdir -p images/edge/parallel
-	mkdir -p images/ridge
-	mkdir -p images/ridge/serial
-	mkdir -p images/ridge/parallel
-	mkdir -p images/sharpen
-	mkdir -p images/sharpen/serial
-	mkdir -p images/sharpen/parallel
-	mkdir -p images/boxblur
-	mkdir -p images/boxblur/serial
-	mkdir -p images/boxblur/parallel
-	mkdir -p images/gaussblur3
-	mkdir -p images/gaussblur3/serial
-	mkdir -p images/gaussblur3/parallel
-	mkdir -p images/gaussblur5
-	mkdir -p images/gaussblur5/serial
-	mkdir -p images/gaussblur5/parallel
-	mkdir -p images/unsharp5
-	mkdir -p images/unsharp5/serial
-	mkdir -p images/unsharp5/parallel
-	mkdir -p images/test
 	mkdir -p data/times
 	mkdir -p data/times/serial
 	mkdir -p data/times/parallel
