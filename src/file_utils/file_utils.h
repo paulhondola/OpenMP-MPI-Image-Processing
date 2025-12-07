@@ -31,8 +31,10 @@ app_error append_benchmark_result(const char *filename, const char *operation,
                                   double parallel_time);
 
 /**
- * Recursively creates directories for the given path.
- * Splits input path into tokens by "/" and creates directories for every token.
+ * Recursively creates all directories specified in the given path.
+ * Handles both absolute and relative paths.
+ * Leading and trailing slashes are ignored.
+ * Only supports "/" as the path separator (Unix-like systems).
  * @param path Path to the directory
  * @return app_error code:
  *         - SUCCESS: Directory created successfully or already exists

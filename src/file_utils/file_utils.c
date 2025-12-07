@@ -86,7 +86,7 @@ app_error append_benchmark_result(const char *filename, const char *operation,
 
   if (parallel_time > 0) {
     speedup = serial_time / parallel_time;
-    if (clusters * threads > 0) {
+    if (clusters > 0 && threads > 0) {
       efficiency = speedup / (clusters * threads);
     }
   }

@@ -43,19 +43,19 @@ app_error create_directories(void) {
     const char *folder = kernels[k].folder;
 
     // Create kernel folder
-    snprintf(path, sizeof(path), "%s", folder);
+    snprintf(path, PATH_MAX, "%s", folder);
     if (create_directory(path) != SUCCESS) {
       return ERR_DIR_CREATE;
     }
 
     // Create serial folder
-    snprintf(path, sizeof(path), "%s/%s", folder, SERIAL_FOLDER);
+    snprintf(path, PATH_MAX, "%s/%s", folder, SERIAL_FOLDER);
     if (create_directory(path) != SUCCESS) {
       return ERR_DIR_CREATE;
     }
 
     // Create parallel folder
-    snprintf(path, sizeof(path), "%s/%s", folder, PARALLEL_FOLDER);
+    snprintf(path, PATH_MAX, "%s/%s", folder, PARALLEL_FOLDER);
     if (create_directory(path) != SUCCESS) {
       return ERR_DIR_CREATE;
     }
@@ -92,6 +92,7 @@ app_error run_benchmark_kernel(const char *input_path, const char *img_name,
            img_name);
   if (save_BMP(output_path, img) != SUCCESS) {
     fprintf(stderr, "\t\tError: Could not save to %s\n", output_path);
+    free_BMP(img);
     return ERR_FILE_WRITE;
   }
 
