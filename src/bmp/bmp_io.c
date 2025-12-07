@@ -29,24 +29,24 @@ Image *alloc_image(int width, int height, Pixel *data) {
 }
 
 /* Read BMP file, build and return Image struct */
-Image *read_BMP(const char *filename) {
+app_error read_BMP(const char *filename, Image **img) {
   FILE *f = fopen(filename, "rb");
   if (!f) {
     fprintf(stderr, "Error: Could not open file %s\n", filename);
-    return NULL;
+    return ERR_FILE_OPEN;
   }
 
   unsigned char header[54];
   if (fread(header, sizeof(unsigned char), 54, f) != 54) {
     fprintf(stderr, "Error: Invalid BMP header\n");
     fclose(f);
-    return NULL;
+    return ERR_BMP_HEADER;
   }
 
   if (header[0] != 'B' || header[1] != 'M') {
     fprintf(stderr, "Error: Not a valid BMP file\n");
     fclose(f);
-    return NULL;
+    return ERR_BMP_HEADER;
   }
 
   int width = *(int *)&header[18];
@@ -56,19 +56,21 @@ Image *read_BMP(const char *filename) {
   if (bitsPerPixel != 24) {
     fprintf(stderr, "Error: Only 24-bit BMPs are supported\n");
     fclose(f);
-    return NULL;
+    return ERR_BMP_HEADER;
   }
 
   int row_padded = (width * 3 + 3) & (~3);
   unsigned char *row = (unsigned char *)malloc(row_padded);
-
   Pixel *data = alloc_pixel(width, height);
+
   if (!data || !row) {
     fprintf(stderr, "Error: Memory allocation failed\n");
-    free(data);
-    free(row);
+    if (data)
+      free(data);
+    if (row)
+      free(row);
     fclose(f);
-    return NULL;
+    return ERR_MEM_ALLOC;
   }
 
   for (int y = 0; y < height; y++) {
@@ -83,16 +85,20 @@ Image *read_BMP(const char *filename) {
   free(row);
   fclose(f);
 
-  Image *img = alloc_image(width, height, data);
-  return img;
+  *img = alloc_image(width, height, data);
+  if (!*img) {
+    free(data);
+    return ERR_MEM_ALLOC;
+  }
+  return SUCCESS;
 }
 
 /* Save Image in file in BMP format */
-int save_BMP(const char *filename, const Image *img) {
+app_error save_BMP(const char *filename, const Image *img) {
   FILE *f = fopen(filename, "wb");
   if (!f) {
     fprintf(stderr, "Error: Could not create file %s\n", filename);
-    return 0;
+    return ERR_FILE_OPEN;
   }
 
   int width = img->width;
@@ -129,7 +135,7 @@ int save_BMP(const char *filename, const Image *img) {
   if (!row) {
     fprintf(stderr, "Error: Memory allocation failed\n");
     fclose(f);
-    return 0;
+    return ERR_MEM_ALLOC;
   }
 
   // Write pixel data bottom-to-top
@@ -145,7 +151,7 @@ int save_BMP(const char *filename, const Image *img) {
 
   free(row);
   fclose(f);
-  return 1;
+  return SUCCESS;
 }
 
 void free_BMP(Image *img) {
@@ -174,47 +180,3 @@ void print_BMP_pixels(Image *img, FILE *fp) {
     fprintf(fp, "\n");
   }
 }
-
-/*
-int main(int argc, char **argv) {
-  if (argc < 3) {
-    fprintf(stderr, "Usage: %s input.bmp output.bmp\n", argv[0]);
-    return 1;
-  }
-
-  const char *in_filename = argv[1];
-  const char *out_filename = argv[2];
-
-  printf("Loading image from file %s \n", in_filename);
-
-  // Read input
-  Image *img = read_BMP(in_filename);
-  if (!img) {
-    fprintf(stderr, "Error reading %s\n", in_filename);
-    return 1;
-  }
-
-  int width = img->width;
-  int height = img->height;
-
-  printf("Image size is width=%d  and height=%d \n", width, height);
-
-  // Transform image - draw a horizontal black line in the middle of the image
-  int thickness = height / 10;
-  for (int i = height / 2 - thickness; i <= height / 2 + thickness; i++)
-    for (int j = 0; j < width; j++) {
-      img->data[i * width + j].r = 0;
-      img->data[i * width + j].g = 0;
-      img->data[i * width + j].b = 0;
-    }
-
-  // Save output
-  save_BMP(out_filename, img);
-  printf("Modified image saved in file %s \n", out_filename);
-
-  free(img->data);
-  free(img);
-
-  return 0;
-}
-*/

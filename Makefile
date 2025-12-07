@@ -1,5 +1,5 @@
-CLUSTERS = 1
-THREADS = 10
+CLUSTERS = 2
+THREADS = 4
 CC = mpicc
 RUN = mpirun
 UNAME_S := $(shell uname -s)
@@ -17,9 +17,13 @@ CFLAGS = $(OMP_FLAGS) $(ERROR_FLAGS) $(PERFORMANCE_FLAGS)
 SRC = $(shell find src -name "*.c")
 BIN = bin/main
 
-run:
+build:
 	$(CC) $(CFLAGS) $(SRC) -o $(BIN)
+
+execute:
 	$(RUN) -n $(CLUSTERS) $(BIN) $(THREADS)
+
+run: setup build execute
 
 clean:
 	find images -mindepth 1 -maxdepth 1 -not -name 'base' -exec rm -rf {} +
@@ -55,6 +59,12 @@ setup:
 	mkdir -p images/unsharp5/serial
 	mkdir -p images/unsharp5/parallel
 	mkdir -p images/test
+	mkdir -p data/times
+	mkdir -p data/times/serial
+	mkdir -p data/times/parallel
+	mkdir -p data/plots
+	mkdir -p data/plots/serial
+	mkdir -p data/plots/parallel
 	@echo "Done."
 
-.PHONY: setup run
+.PHONY: setup run execute build clean

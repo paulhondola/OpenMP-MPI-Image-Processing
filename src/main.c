@@ -1,12 +1,14 @@
 #include "benchmark/benchmark.h"
-#include <limits.h>
-#include <mpi.h>
-#include <omp.h>
+#include "errors/errors.h"
 #include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
 
 int main(int argc, char **argv) {
-  run_benchmark_serial();
+  (void)argc;
+  (void)argv;
+  app_error err = run_benchmark_serial();
+  if (err != SUCCESS) {
+    fprintf(stderr, "Benchmark failed with error: %s\n", get_error_string(err));
+    return 1;
+  }
   return 0;
 }
