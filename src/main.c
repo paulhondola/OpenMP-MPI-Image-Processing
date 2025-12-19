@@ -27,5 +27,12 @@ int main(int argc, char **argv) {
     return 1;
   }
 
+  err = run_verification();
+  if (err != SUCCESS) {
+    fprintf(stderr, "Verification failed with error: %s\n",
+            get_error_string(err));
+    return 1;
+  }
+
   return 0;
 }

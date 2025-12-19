@@ -16,4 +16,6 @@
 app_error convolve_serial(Image *img, Kernel kernel);
 app_error convolve_parallel(Image *img, Kernel kernel);
 
+app_error check_images_match(Image *img1, Image *img2);
+
 #endif

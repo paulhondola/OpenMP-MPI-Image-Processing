@@ -169,3 +169,60 @@ app_error run_benchmark_parallel(void) {
   printf("\n--- Starting Parallel Benchmark ---\n");
   return run_all_files(PARALLEL_FOLDER, convolve_parallel);
 }
+
+app_error run_verification(void) {
+  printf("\n--- Starting Verification ---\n");
+  app_error err = SUCCESS;
+  int mismatches = 0;
+
+  for (int f = 0; f < num_files; f++) {
+    const char *img_name = files[f];
+    printf("\nVerifying file: %s\n", img_name);
+
+    for (int k = 0; k < num_kernels; k++) {
+      const char *dir = kernels[k].directory;
+      char serial_path[PATH_MAX];
+      char parallel_path[PATH_MAX];
+
+      snprintf(serial_path, PATH_MAX, "%s/%s/%s/%s", IMAGES_FOLDER, dir,
+               SERIAL_FOLDER, img_name);
+      snprintf(parallel_path, PATH_MAX, "%s/%s/%s/%s", IMAGES_FOLDER, dir,
+               PARALLEL_FOLDER, img_name);
+
+      Image *img_serial = NULL;
+      Image *img_parallel = NULL;
+
+      // Note: read_BMP takes (Image **, const char *)
+      if (read_BMP(&img_serial, serial_path) != SUCCESS) {
+        fprintf(stderr, "\tError reading serial output: %s\n", serial_path);
+        mismatches++;
+        continue;
+      }
+      if (read_BMP(&img_parallel, parallel_path) != SUCCESS) {
+        fprintf(stderr, "\tError reading parallel output: %s\n", parallel_path);
+        free_BMP(img_serial);
+        mismatches++;
+        continue;
+      }
+
+      if (check_images_match(img_serial, img_parallel) != SUCCESS) {
+        fprintf(stderr, "\tMismatch found in kernel %s\n", kernels[k].name);
+        mismatches++;
+      } else {
+        printf("\t%s: Match\n", kernels[k].name);
+      }
+
+      free_BMP(img_serial);
+      free_BMP(img_parallel);
+    }
+  }
+
+  if (mismatches > 0) {
+    fprintf(stderr, "\nVerification completed with %d mismatches\n",
+            mismatches);
+    return ERR_IMAGE_DIFFERENCE;
+  }
+
+  printf("\nVerification completed successfully. All images match.\n");
+  return SUCCESS;
+}

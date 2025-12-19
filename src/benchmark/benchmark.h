@@ -31,4 +31,10 @@ app_error run_benchmark_serial(void);
  */
 app_error run_benchmark_parallel(void);
 
+/**
+ * Verifies that the serial and parallel outputs match.
+ * @return app_error code
+ */
+app_error run_verification(void);
+
 #endif

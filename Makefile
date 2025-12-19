@@ -1,5 +1,5 @@
 CLUSTERS = 1
-THREADS = 4
+THREADS = 10
 CC = mpicc
 RUN = mpirun
 UNAME_S := $(shell uname -s)
