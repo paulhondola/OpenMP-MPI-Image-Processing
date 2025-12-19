@@ -15,6 +15,9 @@ typedef enum {
   ERR_BMP_HEADER,
   ERR_BMP_DATA,
   ERR_CONVOLUTION,
+  ERR_MPI,
+  ERR_OPENMP,
+  ERR_IMAGE_DIFFERENCE,
   ERR_UNKNOWN
 } app_error;
 

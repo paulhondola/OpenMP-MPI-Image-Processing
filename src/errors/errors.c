@@ -28,6 +28,12 @@ const char *get_error_string(app_error err) {
     return "Invalid BMP data";
   case ERR_CONVOLUTION:
     return "Convolution error";
+  case ERR_MPI:
+    return "MPI error";
+  case ERR_OPENMP:
+    return "OpenMP error";
+  case ERR_IMAGE_DIFFERENCE:
+    return "Image difference error";
   case ERR_UNKNOWN:
     return "Unknown error";
   default:

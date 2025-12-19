@@ -64,3 +64,19 @@ app_error convolve(Image *img, Kernel kernel) {
 
   return SUCCESS;
 }
+
+app_error check_images_match(Image *img1, Image *img2) {
+  if (img1->width != img2->width || img1->height != img2->height) {
+    return ERR_IMAGE_DIFFERENCE;
+  }
+
+  for (int i = 0; i < img1->width * img1->height; i++) {
+    if (img1->data[i].r != img2->data[i].r ||
+        img1->data[i].g != img2->data[i].g ||
+        img1->data[i].b != img2->data[i].b) {
+      return ERR_IMAGE_DIFFERENCE;
+    }
+  }
+
+  return SUCCESS;
+}
