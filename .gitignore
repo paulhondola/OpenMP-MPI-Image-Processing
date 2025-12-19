@@ -1,6 +1,12 @@
 # Test images (too large to commit to github)
 images/
 
+# AI guidelines
+.gemini/
+.claude/
+.cursor/
+.codex/
+
 # Prerequisites
 *.d
 
