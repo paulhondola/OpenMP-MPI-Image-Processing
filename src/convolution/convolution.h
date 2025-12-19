@@ -13,6 +13,7 @@
  *         - SUCCESS: Convolution completed successfully
  *         - ERR_MEM_ALLOC: Memory allocation failed for output image
  */
-app_error convolve(Image *img, Kernel kernel);
+app_error convolve_serial(Image *img, Kernel kernel);
+app_error convolve_parallel(Image *img, Kernel kernel);
 
 #endif

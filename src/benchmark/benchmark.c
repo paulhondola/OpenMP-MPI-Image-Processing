@@ -23,7 +23,6 @@ typedef struct {
 } benchmark_kernel;
 
 // Kernels and their output folders
-// Pointers to extern Kernels defined in kernel.h
 const benchmark_kernel kernels[] = {
     {"Ridge", "ridge", &RIDGE_KERNEL},
     {"Edge", "edge", &EDGE_KERNEL},
@@ -37,6 +36,8 @@ const int num_kernels = sizeof(kernels) / sizeof(kernels[0]);
 // Input files (located in images/base)
 const char *files[] = {"Large.bmp", "XL.bmp", "XXL.bmp"};
 const int num_files = sizeof(files) / sizeof(files[0]);
+
+typedef app_error (*convolve_function)(Image *, Kernel);
 
 app_error create_directories(void) {
   char path[PATH_MAX];
@@ -64,59 +65,64 @@ app_error create_directories(void) {
   return SUCCESS;
 }
 
-app_error run_benchmark_kernel(const char *input_path, const char *img_name,
-                               benchmark_kernel bk) {
-  // 1. Read the clean image every time because convolve modifies it in
-  // place
+// Level 1: Run specific kernel on an image
+app_error run_single_kernel(Image *img, const char *img_name,
+                            benchmark_kernel bk, const char *folder,
+                            convolve_function cv_fn) {
   printf("\tApplying kernel: %s\n", bk.name);
 
-  Image *img = NULL;
-  app_error err = SUCCESS;
-
-  err = read_BMP(input_path, &img);
-
-  if (err != SUCCESS) {
-    fprintf(stderr, "\t\tError: Could not read file %s: %s\n", input_path,
-            get_error_string(err));
-    return err;
-  }
-
-  // 2. Convolve
-  err = convolve(img, *bk.kernel_ptr);
+  app_error err = cv_fn(img, *bk.kernel_ptr);
   if (err != SUCCESS) {
     fprintf(stderr, "\t\tError: Convolution failed for %s on %s: %s\n", bk.name,
             img_name, get_error_string(err));
-    free_BMP(img);
     return err;
   }
 
-  // 3. Save
   char output_path[PATH_MAX];
   snprintf(output_path, PATH_MAX, "%s/%s/%s/%s", IMAGES_FOLDER, bk.directory,
-           SERIAL_FOLDER, img_name);
-  err = save_BMP(output_path, img);
+           folder, img_name);
+
+  err = save_BMP(img, output_path);
   if (err != SUCCESS) {
     fprintf(stderr, "\t\tError: Could not save to %s: %s\n", output_path,
             get_error_string(err));
-    free_BMP(img);
     return err;
   }
 
   printf("\t\tSaved to: %s\n", output_path);
-
-  // 4. Free
-  free_BMP(img);
-
   return SUCCESS;
 }
 
-app_error run_benchmark_serial(void) {
-
-  printf("\nStarting serial benchmark\n");
-
+// Level 2: Run all kernels on an image
+app_error run_all_kernels(Image *base_img, const char *img_name,
+                          const char *folder, convolve_function cv_fn) {
   app_error err = SUCCESS;
 
-  err = create_directories();
+  for (int k = 0; k < num_kernels; k++) {
+    Image *working_img = NULL;
+    // Create a fresh copy for each kernel since convolution is in-place
+    err = copy_image(base_img, &working_img);
+    if (err != SUCCESS) {
+      fprintf(stderr, "\tError: Could not copy image: %s\n",
+              get_error_string(err));
+      return err;
+    }
+
+    err = run_single_kernel(working_img, img_name, kernels[k], folder, cv_fn);
+
+    // Always free the working copy
+    free_BMP(working_img);
+
+    if (err != SUCCESS) {
+      return err;
+    }
+  }
+  return SUCCESS;
+}
+
+// Level 3: Run on all existing files
+app_error run_all_files(const char *folder, convolve_function cv_fn) {
+  app_error err = create_directories();
   if (err != SUCCESS) {
     return err;
   }
@@ -128,15 +134,38 @@ app_error run_benchmark_serial(void) {
              img_name);
 
     printf("\nProcessing file: %s\n", input_path);
-    for (int k = 0; k < num_kernels; k++) {
-      err = run_benchmark_kernel(input_path, img_name, kernels[k]);
-      if (err != SUCCESS) {
-        return err;
-      }
+
+    // Load base image once per file
+    Image *base_img = NULL;
+    // Note: read_BMP takes (Image **, const char *) based on previous edits
+    err = read_BMP(&base_img, input_path);
+    if (err != SUCCESS) {
+      fprintf(stderr, "\tError: Could not read base file %s: %s\n", input_path,
+              get_error_string(err));
+      return err;
+    }
+
+    // Run all kernels on this file
+    err = run_all_kernels(base_img, img_name, folder, cv_fn);
+
+    // Free base image
+    free_BMP(base_img);
+
+    if (err != SUCCESS) {
+      return err;
     }
   }
-
-  printf("\nSerial benchmark completed\n");
-
   return SUCCESS;
+}
+
+// Wrapper for Serial Benchmark
+app_error run_benchmark_serial(void) {
+  printf("\n--- Starting Serial Benchmark ---\n");
+  return run_all_files(SERIAL_FOLDER, convolve_serial);
+}
+
+// Wrapper for Parallel Benchmark
+app_error run_benchmark_parallel(void) {
+  printf("\n--- Starting Parallel Benchmark ---\n");
+  return run_all_files(PARALLEL_FOLDER, convolve_parallel);
 }

@@ -35,7 +35,15 @@ typedef struct {
  *         - ERR_BMP_HEADER: Invalid or unsupported BMP header
  *         - ERR_MEM_ALLOC: Memory allocation failed
  */
-app_error read_BMP(const char *filename, Image **img);
+app_error read_BMP(Image **img, const char *filename);
+
+/**
+ * Creates a deep copy of an Image structure.
+ * @param src Pointer to the source Image
+ * @param dest Pointer to a pointer that will hold the new Image
+ * @return app_error code
+ */
+app_error copy_image(const Image *src, Image **dest);
 
 /**
  * Saves an Image structure to a BMP file.
@@ -46,7 +54,7 @@ app_error read_BMP(const char *filename, Image **img);
  *         - ERR_FILE_OPEN: Could not create/open file
  *         - ERR_MEM_ALLOC: Memory allocation failed during save
  */
-app_error save_BMP(const char *filename, const Image *img);
+app_error save_BMP(const Image *img, const char *filename);
 
 /* Allocators */
 /**
@@ -64,7 +72,7 @@ Pixel *alloc_pixel(int width, int height);
  * @param data Optional pointer to existing pixel data (can be NULL)
  * @return Pointer to allocated Image structure or NULL on failure
  */
-Image *alloc_image(int width, int height, Pixel *data);
+Image *alloc_image(Pixel *data, int width, int height);
 
 /* Free memory allocated for Image */
 /**
@@ -79,13 +87,13 @@ void free_BMP(Image *img);
  * @param img Pointer to the Image structure
  * @param fp File stream to write to
  */
-void print_BMP_header(Image *img, FILE *fp);
+void print_BMP_header(const Image *img, FILE *fp);
 
 /**
  * Prints pixel data to the specified file stream (for debugging).
  * @param img Pointer to the Image structure
  * @param fp File stream to write to
  */
-void print_BMP_pixels(Image *img, FILE *fp);
+void print_BMP_pixels(const Image *img, FILE *fp);
 
 #endif

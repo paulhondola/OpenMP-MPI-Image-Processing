@@ -14,7 +14,7 @@ Pixel *alloc_pixel(int width, int height) {
   return data;
 }
 
-Image *alloc_image(int width, int height, Pixel *data) {
+Image *alloc_image(Pixel *data, int width, int height) {
   Image *img = (Image *)malloc(sizeof(Image));
 
   if (!img) {
@@ -29,7 +29,7 @@ Image *alloc_image(int width, int height, Pixel *data) {
 }
 
 /* Read BMP file, build and return Image struct */
-app_error read_BMP(const char *filename, Image **img) {
+app_error read_BMP(Image **img, const char *filename) {
   FILE *f = fopen(filename, "rb");
   if (!f) {
     fprintf(stderr, "Error: Could not open file %s\n", filename);
@@ -85,7 +85,11 @@ app_error read_BMP(const char *filename, Image **img) {
   free(row);
   fclose(f);
 
-  *img = alloc_image(width, height, data);
+  *img = alloc_image(data, width, height);
+  if (!*img) {
+    free(data);
+    return ERR_MEM_ALLOC;
+  }
   if (!*img) {
     free(data);
     return ERR_MEM_ALLOC;
@@ -93,8 +97,32 @@ app_error read_BMP(const char *filename, Image **img) {
   return SUCCESS;
 }
 
+app_error copy_image(const Image *src, Image **dest) {
+  if (!src || !dest) {
+    return ERR_INVALID_ARGS;
+  }
+
+  // Allocate new pixels
+  Pixel *new_data = alloc_pixel(src->width, src->height);
+  if (!new_data) {
+    return ERR_MEM_ALLOC;
+  }
+
+  // Copy pixel data
+  memcpy(new_data, src->data, src->width * src->height * sizeof(Pixel));
+
+  // Allocate new image struct
+  *dest = alloc_image(new_data, src->width, src->height);
+  if (!*dest) {
+    free(new_data);
+    return ERR_MEM_ALLOC;
+  }
+
+  return SUCCESS;
+}
+
 /* Save Image in file in BMP format */
-app_error save_BMP(const char *filename, const Image *img) {
+app_error save_BMP(const Image *img, const char *filename) {
   FILE *f = fopen(filename, "wb");
   if (!f) {
     fprintf(stderr, "Error: Could not create file %s\n", filename);
@@ -159,20 +187,20 @@ void free_BMP(Image *img) {
   free(img);
 }
 
-void print_BMP_header(Image *img, FILE *fp) {
+void print_BMP_header(const Image *img, FILE *fp) {
   fprintf(fp, "Image header is width=%d  and height=%d \n", img->width,
           img->height);
 }
 
-void print_pixel(Pixel pixel, FILE *fp) {
+void print_pixel(const Pixel pixel, FILE *fp) {
   fprintf(fp, "(%u, %u, %u) ", pixel.r, pixel.g, pixel.b);
 }
 
-void print_BMP_pixel(Image *img, int x, int y, FILE *fp) {
+void print_BMP_pixel(const Image *img, int x, int y, FILE *fp) {
   print_pixel(img->data[y * img->width + x], fp);
 }
 
-void print_BMP_pixels(Image *img, FILE *fp) {
+void print_BMP_pixels(const Image *img, FILE *fp) {
   for (int y = 0; y < img->height; y++) {
     for (int x = 0; x < img->width; x++) {
       print_BMP_pixel(img, x, y, fp);
