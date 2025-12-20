@@ -17,13 +17,13 @@ CFLAGS = $(OMP_FLAGS) $(ERROR_FLAGS) $(PERFORMANCE_FLAGS)
 SRC = $(shell find src -name "*.c")
 BIN = bin/main
 
+run: setup build execute
+
 build:
 	$(CC) $(CFLAGS) $(SRC) -o $(BIN)
 
 execute:
 	$(RUN) -n $(CLUSTERS) $(BIN) $(THREADS)
-
-run: setup build execute
 
 clean:
 	find images -mindepth 1 -maxdepth 1 -not -name 'base' -exec rm -rf {} +

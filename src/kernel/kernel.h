@@ -20,4 +20,6 @@ extern const Kernel GAUSSIAN3_KERNEL;
 extern const Kernel GAUSSIAN5_KERNEL;
 extern const Kernel UNSHARP5_KERNEL;
 
+extern const Kernel CONV_KERNELS[];
+extern const int NUM_KERNELS;
 #endif

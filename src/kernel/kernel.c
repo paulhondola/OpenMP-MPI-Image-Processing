@@ -33,3 +33,9 @@ const double UNSHARP5_DATA[25] = {
     -4.0 / 256, -16.0 / 256, -24.0 / 256, -16.0 / 256, -4.0 / 256,
     -1.0 / 256, -4.0 / 256,  -6.0 / 256,  -4.0 / 256,  -1.0 / 256};
 const Kernel UNSHARP5_KERNEL = {"Unsharp5", "unsharp5", 5, UNSHARP5_DATA};
+
+const Kernel CONV_KERNELS[] = {
+    RIDGE_KERNEL,     EDGE_KERNEL,      SHARPEN_KERNEL, BOXBLUR_KERNEL,
+    GAUSSIAN3_KERNEL, GAUSSIAN5_KERNEL, UNSHARP5_KERNEL};
+
+const int NUM_KERNELS = sizeof(CONV_KERNELS) / sizeof(CONV_KERNELS[0]);

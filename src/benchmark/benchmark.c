@@ -10,29 +10,12 @@
 #include <string.h>
 #include <sys/stat.h>
 
-// Input files (located in images/base)
-const char *files[] = {"Large.bmp", "XL.bmp", "XXL.bmp"};
-const int num_files = sizeof(files) / sizeof(files[0]);
-
-// Image directories
-const char *IMAGES_FOLDER = "images";
-const char *BASE_FOLDER = "base";
-const char *SERIAL_FOLDER = "serial";
-const char *PARALLEL_FOLDER = "parallel";
-
-// Kernels
-const Kernel *const ALL_KERNELS[] = {
-    &RIDGE_KERNEL,     &EDGE_KERNEL,      &SHARPEN_KERNEL, &BOXBLUR_KERNEL,
-    &GAUSSIAN3_KERNEL, &GAUSSIAN5_KERNEL, &UNSHARP5_KERNEL};
-
-const int NUM_KERNELS = sizeof(ALL_KERNELS) / sizeof(ALL_KERNELS[0]);
-
 typedef app_error (*convolve_function)(Image *, Kernel);
 
 app_error create_directories(void) {
   char path[PATH_MAX];
   for (int k = 0; k < NUM_KERNELS; k++) {
-    const char *dir = ALL_KERNELS[k]->directory;
+    const char *dir = CONV_KERNELS[k].directory;
 
     // Create kernel folder
     snprintf(path, PATH_MAX, "%s/%s", IMAGES_FOLDER, dir);
@@ -56,20 +39,20 @@ app_error create_directories(void) {
 }
 
 // Level 1: Run specific kernel on an image
-app_error run_single_kernel(Image *img, const char *img_name, Kernel bk,
+app_error run_single_kernel(Image *img, const char *img_name, Kernel kernel,
                             const char *folder, convolve_function cv_fn) {
-  printf("\tApplying kernel: %s\n", bk.name);
+  printf("\tApplying kernel: %s\n", kernel.name);
 
-  app_error err = cv_fn(img, bk);
+  app_error err = cv_fn(img, kernel);
   if (err != SUCCESS) {
-    fprintf(stderr, "\t\tError: Convolution failed for %s on %s: %s\n", bk.name,
-            img_name, get_error_string(err));
+    fprintf(stderr, "\t\tError: Convolution failed for %s on %s: %s\n",
+            kernel.name, img_name, get_error_string(err));
     return err;
   }
 
   char output_path[PATH_MAX];
-  snprintf(output_path, PATH_MAX, "%s/%s/%s/%s", IMAGES_FOLDER, bk.directory,
-           folder, img_name);
+  snprintf(output_path, PATH_MAX, "%s/%s/%s/%s", IMAGES_FOLDER,
+           kernel.directory, folder, img_name);
 
   err = save_BMP(img, output_path);
   if (err != SUCCESS) {
@@ -97,7 +80,7 @@ app_error run_all_kernels(Image *base_img, const char *img_name,
       return err;
     }
 
-    err = run_single_kernel(working_img, img_name, *ALL_KERNELS[k], folder,
+    err = run_single_kernel(working_img, img_name, CONV_KERNELS[k], folder,
                             cv_fn);
 
     // Always free the working copy
@@ -170,7 +153,7 @@ app_error run_verification(void) {
     printf("\nVerifying file: %s\n", img_name);
 
     for (int k = 0; k < NUM_KERNELS; k++) {
-      const char *dir = ALL_KERNELS[k]->directory;
+      const char *dir = CONV_KERNELS[k].directory;
       char serial_path[PATH_MAX];
       char parallel_path[PATH_MAX];
 
@@ -197,10 +180,10 @@ app_error run_verification(void) {
 
       if (check_images_match(img_serial, img_parallel) != SUCCESS) {
         fprintf(stderr, "\tMismatch found in kernel %s\n",
-                ALL_KERNELS[k]->name);
+                CONV_KERNELS[k].name);
         mismatches++;
       } else {
-        printf("\t%s: Match\n", ALL_KERNELS[k]->name);
+        printf("\t%s: Match\n", CONV_KERNELS[k].name);
       }
 
       free_BMP(img_serial);

@@ -4,8 +4,19 @@
 #include <string.h>
 #include <sys/stat.h>
 
+// CSV Header for the benchmark data file
 const char *CSV_HEADER = "Operation,Clusters,Threads,Serial Time,Parallel "
                          "Time,Speedup,Efficiency";
+
+// Input files (located in images/base)
+const char *files[] = {"Large.bmp", "XL.bmp", "XXL.bmp"};
+const int num_files = sizeof(files) / sizeof(files[0]);
+
+// Image directories
+const char *IMAGES_FOLDER = "images";
+const char *BASE_FOLDER = "base";
+const char *SERIAL_FOLDER = "serial";
+const char *PARALLEL_FOLDER = "parallel";
 
 app_error create_directory(const char *path) {
   if (mkdir(path, 0777) == -1) {

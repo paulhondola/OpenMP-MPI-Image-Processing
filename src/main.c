@@ -4,7 +4,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-// #define RUN_TESTS
+#define RUN_TESTS
 
 int main(int argc, char **argv) {
   int threads = 1;

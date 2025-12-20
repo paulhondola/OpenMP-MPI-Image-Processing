@@ -3,6 +3,15 @@
 
 #include "../errors/errors.h"
 
+// Constants for file paths and names
+extern const char *files[];
+extern const int num_files;
+extern const char *IMAGES_FOLDER;
+extern const char *BASE_FOLDER;
+extern const char *SERIAL_FOLDER;
+extern const char *PARALLEL_FOLDER;
+extern const char *CSV_HEADER;
+
 /**
  * Initializes the benchmark CSV file with headers if it doesn't exist.
  * @param filename Name of the CSV file
