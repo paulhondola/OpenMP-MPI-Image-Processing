@@ -10,39 +10,29 @@
 #include <string.h>
 #include <sys/stat.h>
 
+// Input files (located in images/base)
+const char *files[] = {"Large.bmp", "XL.bmp", "XXL.bmp"};
+const int num_files = sizeof(files) / sizeof(files[0]);
+
+// Image directories
 const char *IMAGES_FOLDER = "images";
 const char *BASE_FOLDER = "base";
 const char *SERIAL_FOLDER = "serial";
 const char *PARALLEL_FOLDER = "parallel";
 
-// Define a struct to map kernel names to their directories and kernel data
-typedef struct {
-  const char *name;
-  const char *directory;
-  const Kernel *kernel_ptr;
-} benchmark_kernel;
+// Kernels
+const Kernel *const ALL_KERNELS[] = {
+    &RIDGE_KERNEL,     &EDGE_KERNEL,      &SHARPEN_KERNEL, &BOXBLUR_KERNEL,
+    &GAUSSIAN3_KERNEL, &GAUSSIAN5_KERNEL, &UNSHARP5_KERNEL};
 
-// Kernels and their output folders
-const benchmark_kernel kernels[] = {
-    {"Ridge", "ridge", &RIDGE_KERNEL},
-    {"Edge", "edge", &EDGE_KERNEL},
-    {"Sharpen", "sharpen", &SHARPEN_KERNEL},
-    {"BoxBlur", "boxblur", &BOXBLUR_KERNEL},
-    {"Gaussian3", "gaussblur3", &GAUSSIAN3_KERNEL},
-    {"Gaussian5", "gaussblur5", &GAUSSIAN5_KERNEL},
-    {"Unsharp5", "unsharp5", &UNSHARP5_KERNEL}};
-const int num_kernels = sizeof(kernels) / sizeof(kernels[0]);
-
-// Input files (located in images/base)
-const char *files[] = {"Large.bmp", "XL.bmp", "XXL.bmp"};
-const int num_files = sizeof(files) / sizeof(files[0]);
+const int NUM_KERNELS = sizeof(ALL_KERNELS) / sizeof(ALL_KERNELS[0]);
 
 typedef app_error (*convolve_function)(Image *, Kernel);
 
 app_error create_directories(void) {
   char path[PATH_MAX];
-  for (int k = 0; k < num_kernels; k++) {
-    const char *dir = kernels[k].directory;
+  for (int k = 0; k < NUM_KERNELS; k++) {
+    const char *dir = ALL_KERNELS[k]->directory;
 
     // Create kernel folder
     snprintf(path, PATH_MAX, "%s/%s", IMAGES_FOLDER, dir);
@@ -66,12 +56,11 @@ app_error create_directories(void) {
 }
 
 // Level 1: Run specific kernel on an image
-app_error run_single_kernel(Image *img, const char *img_name,
-                            benchmark_kernel bk, const char *folder,
-                            convolve_function cv_fn) {
+app_error run_single_kernel(Image *img, const char *img_name, Kernel bk,
+                            const char *folder, convolve_function cv_fn) {
   printf("\tApplying kernel: %s\n", bk.name);
 
-  app_error err = cv_fn(img, *bk.kernel_ptr);
+  app_error err = cv_fn(img, bk);
   if (err != SUCCESS) {
     fprintf(stderr, "\t\tError: Convolution failed for %s on %s: %s\n", bk.name,
             img_name, get_error_string(err));
@@ -98,7 +87,7 @@ app_error run_all_kernels(Image *base_img, const char *img_name,
                           const char *folder, convolve_function cv_fn) {
   app_error err = SUCCESS;
 
-  for (int k = 0; k < num_kernels; k++) {
+  for (int k = 0; k < NUM_KERNELS; k++) {
     Image *working_img = NULL;
     // Create a fresh copy for each kernel since convolution is in-place
     err = copy_image(base_img, &working_img);
@@ -108,7 +97,8 @@ app_error run_all_kernels(Image *base_img, const char *img_name,
       return err;
     }
 
-    err = run_single_kernel(working_img, img_name, kernels[k], folder, cv_fn);
+    err = run_single_kernel(working_img, img_name, *ALL_KERNELS[k], folder,
+                            cv_fn);
 
     // Always free the working copy
     free_BMP(working_img);
@@ -172,15 +162,15 @@ app_error run_benchmark_parallel(void) {
 
 app_error run_verification(void) {
   printf("\n--- Starting Verification ---\n");
-  app_error err = SUCCESS;
+
   int mismatches = 0;
 
   for (int f = 0; f < num_files; f++) {
     const char *img_name = files[f];
     printf("\nVerifying file: %s\n", img_name);
 
-    for (int k = 0; k < num_kernels; k++) {
-      const char *dir = kernels[k].directory;
+    for (int k = 0; k < NUM_KERNELS; k++) {
+      const char *dir = ALL_KERNELS[k]->directory;
       char serial_path[PATH_MAX];
       char parallel_path[PATH_MAX];
 
@@ -206,10 +196,11 @@ app_error run_verification(void) {
       }
 
       if (check_images_match(img_serial, img_parallel) != SUCCESS) {
-        fprintf(stderr, "\tMismatch found in kernel %s\n", kernels[k].name);
+        fprintf(stderr, "\tMismatch found in kernel %s\n",
+                ALL_KERNELS[k]->name);
         mismatches++;
       } else {
-        printf("\t%s: Match\n", kernels[k].name);
+        printf("\t%s: Match\n", ALL_KERNELS[k]->name);
       }
 
       free_BMP(img_serial);
