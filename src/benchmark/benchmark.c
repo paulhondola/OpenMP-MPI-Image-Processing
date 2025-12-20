@@ -192,12 +192,12 @@ app_error run_verification(void) {
       Image *img_serial = NULL;
       Image *img_parallel = NULL;
 
-      // Note: read_BMP takes (Image **, const char *)
       if (read_BMP(&img_serial, serial_path) != SUCCESS) {
         fprintf(stderr, "\tError reading serial output: %s\n", serial_path);
         mismatches++;
         continue;
       }
+
       if (read_BMP(&img_parallel, parallel_path) != SUCCESS) {
         fprintf(stderr, "\tError reading parallel output: %s\n", parallel_path);
         free_BMP(img_serial);

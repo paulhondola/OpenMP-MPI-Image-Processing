@@ -90,10 +90,7 @@ app_error read_BMP(Image **img, const char *filename) {
     free(data);
     return ERR_MEM_ALLOC;
   }
-  if (!*img) {
-    free(data);
-    return ERR_MEM_ALLOC;
-  }
+
   return SUCCESS;
 }
 
