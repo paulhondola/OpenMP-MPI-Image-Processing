@@ -5,6 +5,7 @@ images/
 .vscode/
 
 # AI guidelines
+.gemini/
 .claude/
 .cursor/
 .codex/
