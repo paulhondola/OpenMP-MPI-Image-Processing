@@ -2,6 +2,7 @@
 #include <mpi.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
 
 unsigned char cast_to_pixel_value(double val) {
   return (unsigned char)(val < 0 ? 0 : (val > 255 ? 255 : val));
@@ -346,56 +347,7 @@ app_error convolve_parallel_distributed_filesystem(Image *img, Kernel kernel,
 
 app_error convolve_parallel_shared_filesystem(Image *img, Kernel kernel,
                                               double *elapsed_time) {
-  double start_time = MPI_Wtime();
-  int width = img->width;
-  int height = img->height;
-  int k_size = kernel.size;
-  int half_k = k_size / 2;
-
-  Pixel *output = alloc_pixel(width, height);
-  if (!output) {
-    return ERR_MEM_ALLOC;
-  }
-
-  Pixel *restrict output_data = output;
-  const Pixel *restrict input_data = img->data;
-  const double *restrict kernel_data = kernel.data;
-
-#pragma omp parallel for collapse(2) schedule(dynamic)
-  for (int y = 0; y < height; y++) {
-    for (int x = 0; x < width; x++) {
-      double r_acc = 0, g_acc = 0, b_acc = 0;
-
-      for (int ky = 0; ky < k_size; ky++) {
-        for (int kx = 0; kx < k_size; kx++) {
-          int py = y + ky - half_k;
-          int px = x + kx - half_k;
-
-          clamp_to_boundary(&px, &py, width, height);
-
-          Pixel p = input_data[py * width + px];
-          double k_val = kernel_data[ky * k_size + kx];
-
-          r_acc += p.r * k_val;
-          g_acc += p.g * k_val;
-          b_acc += p.b * k_val;
-        }
-      }
-
-      Pixel out_p;
-      clamp_pixel(&out_p, r_acc, g_acc, b_acc);
-      output_data[y * width + x] = out_p;
-    }
-  }
-
-  free(img->data);
-  img->data = output;
-
-  double end_time = MPI_Wtime();
-  if (elapsed_time != NULL)
-    *elapsed_time = end_time - start_time;
-
-  return SUCCESS;
+  return convolve_parallel_multithreaded(img, kernel, elapsed_time);
 }
 
 app_error check_images_match(Image *img1, Image *img2) {

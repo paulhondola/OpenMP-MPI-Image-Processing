@@ -2,8 +2,8 @@
 #define __KERNEL_RUN_H__
 
 #include "../bmp/bmp_io.h"
+#include "../constants/kernel.h"
 #include "../errors/errors.h"
-#include "../kernel/kernel.h"
 
 // Callback type for convolution functions
 typedef app_error (*convolve_function)(Image *, Kernel, double *);

@@ -2,9 +2,12 @@
 #define __BENCHMARK_H__
 
 #include "../errors/errors.h"
+#define TEST_MULTITHREADED
+#define TEST_SHARED_FS
+#define TEST_DISTRIBUTED_FS
 
 /**
- * Runs the serial version of the image processing benchmark.
+ * @brief Runs the serial version of the image processing benchmark.
  * Executes convolution with various kernels on a test image.
  * @return app_error code:
  *         - SUCCESS: Benchmark completed successfully
@@ -18,14 +21,14 @@
 app_error run_benchmark_serial(void);
 
 /**
- * Runs the parallel version of the image processing benchmark.
+ * @brief Runs the parallel version of the image processing benchmark.
  * Uses OpenMP for shared memory parallelism.
  * @return app_error code
  */
 app_error run_benchmark_parallel_multithreaded(void);
 
 /**
- * Runs the parallel version of the image processing benchmark.
+ * @brief Runs the parallel version of the image processing benchmark.
  * Uses MPI and OpenMP for distributed memory parallelism.
  * @return app_error code
  */
@@ -40,7 +43,7 @@ app_error run_benchmark_parallel_distributed_fs(void);
 app_error run_benchmark_parallel_shared_fs(void);
 
 /**
- * Verifies that the serial and parallel outputs match.
+ * @brief Verifies that the serial and parallel outputs match.
  * @return app_error code
  */
 app_error run_verification(void);

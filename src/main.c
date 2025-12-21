@@ -6,8 +6,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define RUN_TESTS
-
 #define DEFAULT_THREAD_COUNT 10
 
 void init_mpi(int argc, char **argv, int *comm_rank, int *comm_size,
@@ -37,8 +35,6 @@ int main(int argc, char **argv) {
 
   app_error err = SUCCESS;
 
-#ifdef RUN_TESTS
-
   // RUN SERIAL
   err = run_benchmark_serial();
   if (err != SUCCESS) {
@@ -48,6 +44,8 @@ int main(int argc, char **argv) {
     MPI_Finalize();
     return 1;
   }
+
+#ifdef TEST_MULTITHREADED
 
   // RUN PARALLEL MULTITHREADED
   err = run_benchmark_parallel_multithreaded();
@@ -59,18 +57,9 @@ int main(int argc, char **argv) {
     MPI_Finalize();
     return 2;
   }
+#endif
 
-  // RUN PARALLEL SHARED FS
-  err = run_benchmark_parallel_shared_fs();
-  if (err != SUCCESS) {
-    if (comm_rank == 0)
-      fprintf(stderr,
-              "Parallel benchmark (Shared Filesystem) failed with error: %s\n",
-              get_error_string(err));
-    MPI_Finalize();
-    return 3;
-  }
-
+#ifdef TEST_DISTRIBUTED_FS
   // RUN PARALLEL DISTRIBUTED FS
   err = run_benchmark_parallel_distributed_fs();
   if (err != SUCCESS) {
@@ -81,6 +70,19 @@ int main(int argc, char **argv) {
           get_error_string(err));
     MPI_Finalize();
     return 4;
+  }
+#endif
+
+#ifdef TEST_SHARED_FS
+  // RUN PARALLEL SHARED FS
+  err = run_benchmark_parallel_shared_fs();
+  if (err != SUCCESS) {
+    if (comm_rank == 0)
+      fprintf(stderr,
+              "Parallel benchmark (Shared Filesystem) failed with error: %s\n",
+              get_error_string(err));
+    MPI_Finalize();
+    return 3;
   }
 #endif
 

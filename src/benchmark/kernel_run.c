@@ -1,4 +1,5 @@
 #include "kernel_run.h"
+#include "../constants/files.h"
 #include "../file_utils/file_utils.h"
 #include <limits.h>
 #include <mpi.h>
@@ -7,6 +8,7 @@
 // Level 0: Create directories
 app_error create_directories(void) {
   int rank;
+  app_error err = SUCCESS;
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
   if (rank != 0)
     return SUCCESS;
@@ -17,36 +19,36 @@ app_error create_directories(void) {
 
     // Create kernel folder
     snprintf(path, PATH_MAX, "%s/%s", IMAGES_FOLDER, dir);
-    if (create_directory(path) != SUCCESS) {
-      return ERR_DIR_CREATE;
-    }
+    err = create_directory(path);
+    if (err)
+      return err;
 
     // Create serial test folder
     snprintf(path, PATH_MAX, "%s/%s/%s", IMAGES_FOLDER, dir, SERIAL_FOLDER);
-    if (create_directory(path) != SUCCESS) {
-      return ERR_DIR_CREATE;
-    }
+    err = create_directory(path);
+    if (err)
+      return err;
 
     // Create parallel multithreaded test folder
     snprintf(path, PATH_MAX, "%s/%s/%s", IMAGES_FOLDER, dir,
              PARALLEL_MULTITHREADED_FOLDER);
-    if (create_directory(path) != SUCCESS) {
-      return ERR_DIR_CREATE;
-    }
+    err = create_directory(path);
+    if (err)
+      return err;
 
     // Create parallel distributed test folder
     snprintf(path, PATH_MAX, "%s/%s/%s", IMAGES_FOLDER, dir,
              PARALLEL_DISTRIBUTED_FS_FOLDER);
-    if (create_directory(path) != SUCCESS) {
-      return ERR_DIR_CREATE;
-    }
+    err = create_directory(path);
+    if (err)
+      return err;
 
     // Create parallel shared test folder
     snprintf(path, PATH_MAX, "%s/%s/%s", IMAGES_FOLDER, dir,
              PARALLEL_SHARED_FS_FOLDER);
-    if (create_directory(path) != SUCCESS) {
-      return ERR_DIR_CREATE;
-    }
+    err = create_directory(path);
+    if (err)
+      return err;
   }
   return SUCCESS;
 }
@@ -63,7 +65,7 @@ app_error run_single_kernel(Image *img, const char *img_name, Kernel kernel,
 
   double elapsed_time = 0.0;
   app_error err = cv_fn(img, kernel, &elapsed_time);
-  if (err != SUCCESS) {
+  if (err) {
     if (rank == 0)
       fprintf(stderr, "\tError executing kernel %s: %d\n", kernel.name, err);
     return err;
@@ -77,7 +79,7 @@ app_error run_single_kernel(Image *img, const char *img_name, Kernel kernel,
              benchmark_type_folder, img_name);
 
     err = save_BMP(img, output_path);
-    if (err != SUCCESS) {
+    if (err) {
       fprintf(stderr, "\t\tError: Could not save to %s: %s\n", output_path,
               get_error_string(err));
       return err;
@@ -104,7 +106,7 @@ app_error run_all_kernels(Image *base_img, const char *img_name,
     // logic is fully distributed. But for simplicity, we let rank 0 copy.
     if (rank == 0) {
       err = copy_image(base_img, &working_img);
-      if (err != SUCCESS) {
+      if (err) {
         fprintf(stderr, "\tError: Could not copy image: %s\n",
                 get_error_string(err));
         return err;
@@ -125,9 +127,8 @@ app_error run_all_kernels(Image *base_img, const char *img_name,
     if (rank == 0)
       free_BMP(working_img);
 
-    if (err != SUCCESS) {
+    if (err)
       return err;
-    }
   }
   return SUCCESS;
 }
@@ -136,9 +137,8 @@ app_error run_all_kernels(Image *base_img, const char *img_name,
 app_error run_all_files(const char *benchmark_type_folder,
                         convolve_function cv_fn) {
   app_error err = create_directories();
-  if (err != SUCCESS) {
+  if (err)
     return err;
-  }
 
   int rank;
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
@@ -161,7 +161,7 @@ app_error run_all_files(const char *benchmark_type_folder,
       snprintf(input_path, PATH_MAX, "%s/%s/%s", IMAGES_FOLDER, BASE_FOLDER,
                img_name);
       err = read_BMP(&base_img, input_path);
-      if (err != SUCCESS) {
+      if (err) {
         fprintf(stderr, "\tError: Could not read base file %s: %s\n",
                 input_path, get_error_string(err));
         return err;
@@ -175,9 +175,8 @@ app_error run_all_files(const char *benchmark_type_folder,
     if (rank == 0)
       free_BMP(base_img);
 
-    if (err != SUCCESS) {
+    if (err)
       return err;
-    }
   }
   return SUCCESS;
 }

@@ -1,23 +1,8 @@
 #include "file_utils.h"
+#include "../constants/files.h"
 #include <errno.h>
 #include <stdio.h>
 #include <sys/stat.h>
-
-// CSV Header for the benchmark data file
-const char *CSV_HEADER = "Operation,Clusters,Threads,Serial Time,Parallel "
-                         "Time,Speedup,Efficiency";
-
-// Input files (located in images/base)
-const char *files[] = {"Large.bmp", "XL.bmp", "XXL.bmp"};
-const int num_files = sizeof(files) / sizeof(files[0]);
-
-// Image directories
-const char *IMAGES_FOLDER = "images";
-const char *BASE_FOLDER = "base";
-const char *SERIAL_FOLDER = "serial";
-const char *PARALLEL_MULTITHREADED_FOLDER = "parallel_multithreaded";
-const char *PARALLEL_DISTRIBUTED_FS_FOLDER = "parallel_distributed";
-const char *PARALLEL_SHARED_FS_FOLDER = "parallel_shared";
 
 app_error create_directory(const char *path) {
   if (mkdir(path, 0777) == -1) {
@@ -58,27 +43,25 @@ app_error init_benchmark_csv(const char *filename) {
   return SUCCESS;
 }
 
-app_error append_benchmark_result(const char *filename, const char *operation,
-                                  int clusters, int threads, double serial_time,
-                                  double parallel_time) {
+app_error append_benchmark_result(const char *filename, int image_size,
+                                  const char *operation, int clusters,
+                                  int threads, double serial_time,
+                                  double multithreaded_time,
+                                  double distributed_time, double shared_time) {
   FILE *fp = fopen(filename, "a");
   if (fp == NULL) {
     perror("Error opening CSV file for appending");
     return ERR_FILE_OPEN;
   }
 
-  double speedup = 0.0;
-  double efficiency = 0.0;
+  double multithreaded_speedup = serial_time / multithreaded_time;
+  double distributed_speedup = serial_time / distributed_time;
+  double shared_speedup = serial_time / shared_time;
 
-  if (parallel_time > 0) {
-    speedup = serial_time / parallel_time;
-    if (clusters > 0 && threads > 0) {
-      efficiency = speedup / (clusters * threads);
-    }
-  }
+  fprintf(fp, "%d,%s,%d,%d,%.6f,%.6f,%.6f,%.6f\n", image_size, operation,
+          clusters, threads, serial_time, multithreaded_speedup,
+          distributed_speedup, shared_speedup);
 
-  fprintf(fp, "%s,%d,%d,%.6f,%.6f,%.6f,%.6f\n", operation, clusters, threads,
-          serial_time, parallel_time, speedup, efficiency);
   fclose(fp);
   return SUCCESS;
 }

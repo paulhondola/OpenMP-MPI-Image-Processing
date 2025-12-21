@@ -3,17 +3,6 @@
 
 #include "../errors/errors.h"
 
-// Constants for file paths and names
-extern const char *files[];
-extern const int num_files;
-extern const char *IMAGES_FOLDER;
-extern const char *BASE_FOLDER;
-extern const char *SERIAL_FOLDER;
-extern const char *PARALLEL_MULTITHREADED_FOLDER;
-extern const char *PARALLEL_DISTRIBUTED_FS_FOLDER;
-extern const char *PARALLEL_SHARED_FS_FOLDER;
-extern const char *CSV_HEADER;
-
 /**
  * Initializes the benchmark CSV file with headers if it doesn't exist.
  * @param filename Name of the CSV file
@@ -28,18 +17,23 @@ app_error init_benchmark_csv(const char *filename);
  * Appends a benchmark result row to the CSV file.
  * Automatically calculates speedup and efficiency.
  * @param filename Name of the CSV file
+ * @param image_size Size of the image
  * @param operation Name of the operation/benchmark
  * @param clusters Number of clusters (or processes)
  * @param threads Number of threads
  * @param serial_time Time taken for serial execution
- * @param parallel_time Time taken for parallel execution
+ * @param multithreaded_time Time taken for multithreaded execution
+ * @param distributed_time Time taken for distributed execution
+ * @param shared_time Time taken for shared execution
  * @return app_error code:
  *         - SUCCESS: Result appended successfully
  *         - ERR_FILE_OPEN: Could not open file for appending
  */
-app_error append_benchmark_result(const char *filename, const char *operation,
-                                  int clusters, int threads, double serial_time,
-                                  double parallel_time);
+app_error append_benchmark_result(const char *filename, int image_size,
+                                  const char *operation, int clusters,
+                                  int threads, double serial_time,
+                                  double multithreaded_time,
+                                  double distributed_time, double shared_time);
 
 /**
  * Recursively creates all directories specified in the given path.
@@ -50,7 +44,7 @@ app_error append_benchmark_result(const char *filename, const char *operation,
  * @return app_error code:
  *         - SUCCESS: Directory created successfully or already exists
  *         - ERR_INVALID_ARGS: Path is NULL or empty
- *         - ERR_DIR_CREATE: failed to create directory (fork/exec/mkdir failed)
+ *         - ERR_DIR_CREATE: failed to create directory (mkdir failed)
  */
 app_error create_directory(const char *path);
 

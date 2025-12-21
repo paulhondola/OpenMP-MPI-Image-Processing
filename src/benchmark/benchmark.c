@@ -1,8 +1,8 @@
 #include "benchmark.h"
 #include "../bmp/bmp_io.h"
+#include "../constants/files.h"
+#include "../constants/kernel.h"
 #include "../convolution/convolution.h"
-#include "../file_utils/file_utils.h"
-#include "../kernel/kernel.h"
 #include "kernel_run.h"
 #include <limits.h>
 #include <mpi.h>
@@ -10,10 +10,6 @@
 #define GREEN "\033[0;32m"
 #define RED "\033[0;31m"
 #define RESET "\033[0m"
-
-#define TEST_MULTITHREADED
-#define TEST_SHARED_FS
-#define TEST_DISTRIBUTED_FS
 
 app_error run_benchmark_serial(void) {
   int rank;
@@ -36,17 +32,6 @@ app_error run_benchmark_parallel_multithreaded(void) {
   return SUCCESS;
 }
 
-app_error run_benchmark_parallel_shared_fs(void) {
-  int rank;
-  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-  if (rank == 0) {
-    printf("\n--- Starting Parallel Benchmark (Shared Filesystem) ---\n");
-    return run_all_files(PARALLEL_SHARED_FS_FOLDER,
-                         convolve_parallel_shared_filesystem);
-  }
-  return SUCCESS;
-}
-
 app_error run_benchmark_parallel_distributed_fs(void) {
   int rank;
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
@@ -58,21 +43,34 @@ app_error run_benchmark_parallel_distributed_fs(void) {
                        convolve_parallel_distributed_filesystem);
 }
 
-void verify_implementation(const char *kernel_dir, const char *impl_folder,
-                           const char *img_name, Image *img_serial,
-                           int *mismatches) {
+app_error run_benchmark_parallel_shared_fs(void) {
+  int rank;
+  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+  if (rank == 0) {
+    printf("\n--- Starting Parallel Benchmark (Shared Filesystem) ---\n");
+    return run_all_files(PARALLEL_SHARED_FS_FOLDER,
+                         convolve_parallel_shared_filesystem);
+  }
+  return SUCCESS;
+}
+
+app_error verify_implementation(const char *kernel_dir, const char *impl_folder,
+                                const char *img_name, Image *img_serial,
+                                int *mismatches) {
   char path[PATH_MAX];
   snprintf(path, PATH_MAX, "%s/%s/%s/%s", IMAGES_FOLDER, kernel_dir,
            impl_folder, img_name);
 
   Image *img_parallel = NULL;
-  if (read_BMP(&img_parallel, path) != SUCCESS) {
+  app_error err = read_BMP(&img_parallel, path);
+  if (err) {
     fprintf(stderr, "\tError reading %s output: %s\n", impl_folder, path);
     (*mismatches)++;
-    return;
+    return err;
   }
 
-  if (check_images_match(img_serial, img_parallel) != SUCCESS) {
+  err = check_images_match(img_serial, img_parallel);
+  if (err) {
     fprintf(stderr, RED "\tMismatch found in kernel %s (%s)\n" RESET,
             kernel_dir, impl_folder);
     (*mismatches)++;
@@ -81,13 +79,14 @@ void verify_implementation(const char *kernel_dir, const char *impl_folder,
   }
 
   free_BMP(img_parallel);
+  return err;
 }
 
 app_error run_verification(void) {
   printf("\n--- Starting Verification ---\n");
 
   int mismatches = 0;
-
+  app_error err = SUCCESS;
   for (int f = 0; f < num_files; f++) {
     const char *img_name = files[f];
     printf("\nVerifying file: %s\n", img_name);
@@ -101,18 +100,19 @@ app_error run_verification(void) {
 
       Image *img_serial = NULL;
 
-      if (read_BMP(&img_serial, serial_path) != SUCCESS) {
+      err = read_BMP(&img_serial, serial_path);
+      if (err) {
         fprintf(stderr, "\tError reading serial output: %s\n", serial_path);
         mismatches++;
         continue;
       }
 
-      verify_implementation(kernel_name, PARALLEL_MULTITHREADED_FOLDER,
-                            img_name, img_serial, &mismatches);
-      verify_implementation(kernel_name, PARALLEL_DISTRIBUTED_FS_FOLDER,
-                            img_name, img_serial, &mismatches);
-      verify_implementation(kernel_name, PARALLEL_SHARED_FS_FOLDER, img_name,
-                            img_serial, &mismatches);
+      (void)verify_implementation(kernel_name, PARALLEL_MULTITHREADED_FOLDER,
+                                  img_name, img_serial, &mismatches);
+      (void)verify_implementation(kernel_name, PARALLEL_DISTRIBUTED_FS_FOLDER,
+                                  img_name, img_serial, &mismatches);
+      (void)verify_implementation(kernel_name, PARALLEL_SHARED_FS_FOLDER,
+                                  img_name, img_serial, &mismatches);
 
       free_BMP(img_serial);
     }
