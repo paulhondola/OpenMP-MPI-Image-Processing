@@ -24,7 +24,8 @@ void clamp_to_boundary(int *px, int *py, int width, int height) {
     *py = height - 1;
 }
 
-app_error convolve_serial(Image *img, Kernel kernel) {
+app_error convolve_serial(Image *img, Kernel kernel, double *elapsed_time) {
+  double start_time = MPI_Wtime();
   int width = img->width;
   int height = img->height;
   int k_size = kernel.size;
@@ -64,10 +65,17 @@ app_error convolve_serial(Image *img, Kernel kernel) {
   free(img->data);
   img->data = output;
 
+  double end_time = MPI_Wtime();
+  if (elapsed_time != NULL) {
+    *elapsed_time = end_time - start_time;
+  }
+
   return SUCCESS;
 }
 
-app_error convolve_parallel_multithreaded(Image *img, Kernel kernel) {
+app_error convolve_parallel_multithreaded(Image *img, Kernel kernel,
+                                          double *elapsed_time) {
+  double start_time = MPI_Wtime();
   int width = img->width;
   int height = img->height;
   int k_size = kernel.size;
@@ -112,6 +120,10 @@ app_error convolve_parallel_multithreaded(Image *img, Kernel kernel) {
   free(img->data);
   img->data = output;
 
+  double end_time = MPI_Wtime();
+  if (elapsed_time != NULL)
+    *elapsed_time = end_time - start_time;
+
   return SUCCESS;
 }
 
@@ -152,14 +164,14 @@ void exchange_halos(Pixel *data, int width, int local_h, int halo_size,
                MPI_COMM_WORLD, &status);
 }
 
-app_error convolve_parallel_distributed_filesystem(Image *img, Kernel kernel) {
+app_error convolve_parallel_distributed_filesystem(Image *img, Kernel kernel,
+                                                   double *elapsed_time) {
+  double start_time = MPI_Wtime();
   int rank, size;
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
   MPI_Comm_size(MPI_COMM_WORLD, &size);
 
   int width, height, k_size;
-  // const double *kernel_data = kernel.data; // Only valid on rank 0, used via
-  // local_kernel_data
 
   // 1. Broadcast Dimensions
   if (rank == 0) {
@@ -325,10 +337,16 @@ app_error convolve_parallel_distributed_filesystem(Image *img, Kernel kernel) {
     free(rdispls);
   }
 
+  double end_time = MPI_Wtime();
+  if (elapsed_time != NULL)
+    *elapsed_time = end_time - start_time;
+
   return SUCCESS;
 }
 
-app_error convolve_parallel_shared_filesystem(Image *img, Kernel kernel) {
+app_error convolve_parallel_shared_filesystem(Image *img, Kernel kernel,
+                                              double *elapsed_time) {
+  double start_time = MPI_Wtime();
   int width = img->width;
   int height = img->height;
   int k_size = kernel.size;
@@ -372,6 +390,10 @@ app_error convolve_parallel_shared_filesystem(Image *img, Kernel kernel) {
 
   free(img->data);
   img->data = output;
+
+  double end_time = MPI_Wtime();
+  if (elapsed_time != NULL)
+    *elapsed_time = end_time - start_time;
 
   return SUCCESS;
 }

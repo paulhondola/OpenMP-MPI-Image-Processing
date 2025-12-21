@@ -61,16 +61,17 @@ app_error run_single_kernel(Image *img, const char *img_name, Kernel kernel,
   if (rank == 0)
     printf("\tApplying kernel: %s\n", kernel.name);
 
-  app_error err = cv_fn(img, kernel);
+  double elapsed_time = 0.0;
+  app_error err = cv_fn(img, kernel, &elapsed_time);
   if (err != SUCCESS) {
     if (rank == 0)
-      fprintf(stderr, "\t\tError: Convolution failed for %s on %s: %s\n",
-              kernel.name, img_name, get_error_string(err));
+      fprintf(stderr, "\tError executing kernel %s: %d\n", kernel.name, err);
     return err;
   }
 
-  // Only rank 0 saves the image
+  // Only rank 0 saves the image and logs
   if (rank == 0) {
+    printf("\tTime: %.6f s\n", elapsed_time);
     char output_path[PATH_MAX];
     snprintf(output_path, PATH_MAX, "%s/%s/%s/%s", IMAGES_FOLDER, kernel.name,
              benchmark_type_folder, img_name);
@@ -82,7 +83,7 @@ app_error run_single_kernel(Image *img, const char *img_name, Kernel kernel,
       return err;
     }
 
-    printf("\t\tSaved to: %s\n", output_path);
+    printf("\t\tSaved to: %s\n\n", output_path);
   }
   return SUCCESS;
 }

@@ -6,7 +6,7 @@
 #include "../kernel/kernel.h"
 
 // Callback type for convolution functions
-typedef app_error (*convolve_function)(Image *, Kernel);
+typedef app_error (*convolve_function)(Image *, Kernel, double *);
 
 /**
  * @brief Runs a single kernel on an image and saves the output.
