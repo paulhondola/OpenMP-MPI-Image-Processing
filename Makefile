@@ -25,6 +25,20 @@ build:
 execute:
 	$(RUN) -n $(CLUSTERS) $(BIN) $(THREADS)
 
+CLUSTER_ARRAY = (2 4 8)
+THREAD_ARRAY = (2 4 8 10)
+
+sweep:
+	for C in $(CLUSTER_ARRAY); do
+		for T in $(THREAD_ARRAY); do
+			echo "Running with CLUSTERS=$C, THREADS=$T"
+			$(RUN) -n $C $(BIN) $T
+		done
+	done
+
+plot:
+	python3 data/plot_benchmark.py
+
 clean:
 	find images -mindepth 1 -maxdepth 1 -not -name 'base' -exec rm -rf {} +
 	rm -f $(BIN)
@@ -37,12 +51,6 @@ setup:
 	mkdir -p data
 	mkdir -p images
 	mkdir -p images/base
-	mkdir -p data/times
-	mkdir -p data/times/serial
-	mkdir -p data/times/parallel
-	mkdir -p data/plots
-	mkdir -p data/plots/serial
-	mkdir -p data/plots/parallel
 	@echo "Done."
 
-.PHONY: setup run execute build clean
+.PHONY: setup run execute build clean plot
