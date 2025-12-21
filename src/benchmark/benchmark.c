@@ -1,219 +1,120 @@
 #include "benchmark.h"
 #include "../bmp/bmp_io.h"
+#include "../constants/files.h"
+#include "../constants/kernel.h"
 #include "../convolution/convolution.h"
-#include "../file_utils/file_utils.h"
-#include "../kernel/kernel.h"
-#include <errno.h>
+#include "kernel_run.h"
 #include <limits.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <sys/stat.h>
+#include <mpi.h>
 
-const char *IMAGES_FOLDER = "images";
-const char *BASE_FOLDER = "base";
-const char *SERIAL_FOLDER = "serial";
-const char *PARALLEL_FOLDER = "parallel";
+#define GREEN "\033[0;32m"
+#define RED "\033[0;31m"
+#define RESET "\033[0m"
 
-// Define a struct to map kernel names to their directories and kernel data
-typedef struct {
-  const char *name;
-  const char *directory;
-  const Kernel *kernel_ptr;
-} benchmark_kernel;
-
-// Kernels and their output folders
-const benchmark_kernel kernels[] = {
-    {"Ridge", "ridge", &RIDGE_KERNEL},
-    {"Edge", "edge", &EDGE_KERNEL},
-    {"Sharpen", "sharpen", &SHARPEN_KERNEL},
-    {"BoxBlur", "boxblur", &BOXBLUR_KERNEL},
-    {"Gaussian3", "gaussblur3", &GAUSSIAN3_KERNEL},
-    {"Gaussian5", "gaussblur5", &GAUSSIAN5_KERNEL},
-    {"Unsharp5", "unsharp5", &UNSHARP5_KERNEL}};
-const int num_kernels = sizeof(kernels) / sizeof(kernels[0]);
-
-// Input files (located in images/base)
-const char *files[] = {"Large.bmp", "XL.bmp", "XXL.bmp"};
-const int num_files = sizeof(files) / sizeof(files[0]);
-
-typedef app_error (*convolve_function)(Image *, Kernel);
-
-app_error create_directories(void) {
-  char path[PATH_MAX];
-  for (int k = 0; k < num_kernels; k++) {
-    const char *dir = kernels[k].directory;
-
-    // Create kernel folder
-    snprintf(path, PATH_MAX, "%s/%s", IMAGES_FOLDER, dir);
-    if (create_directory(path) != SUCCESS) {
-      return ERR_DIR_CREATE;
-    }
-
-    // Create serial folder
-    snprintf(path, PATH_MAX, "%s/%s/%s", IMAGES_FOLDER, dir, SERIAL_FOLDER);
-    if (create_directory(path) != SUCCESS) {
-      return ERR_DIR_CREATE;
-    }
-
-    // Create parallel folder
-    snprintf(path, PATH_MAX, "%s/%s/%s", IMAGES_FOLDER, dir, PARALLEL_FOLDER);
-    if (create_directory(path) != SUCCESS) {
-      return ERR_DIR_CREATE;
-    }
-  }
-  return SUCCESS;
-}
-
-// Level 1: Run specific kernel on an image
-app_error run_single_kernel(Image *img, const char *img_name,
-                            benchmark_kernel bk, const char *folder,
-                            convolve_function cv_fn) {
-  printf("\tApplying kernel: %s\n", bk.name);
-
-  app_error err = cv_fn(img, *bk.kernel_ptr);
-  if (err != SUCCESS) {
-    fprintf(stderr, "\t\tError: Convolution failed for %s on %s: %s\n", bk.name,
-            img_name, get_error_string(err));
-    return err;
-  }
-
-  char output_path[PATH_MAX];
-  snprintf(output_path, PATH_MAX, "%s/%s/%s/%s", IMAGES_FOLDER, bk.directory,
-           folder, img_name);
-
-  err = save_BMP(img, output_path);
-  if (err != SUCCESS) {
-    fprintf(stderr, "\t\tError: Could not save to %s: %s\n", output_path,
-            get_error_string(err));
-    return err;
-  }
-
-  printf("\t\tSaved to: %s\n", output_path);
-  return SUCCESS;
-}
-
-// Level 2: Run all kernels on an image
-app_error run_all_kernels(Image *base_img, const char *img_name,
-                          const char *folder, convolve_function cv_fn) {
-  app_error err = SUCCESS;
-
-  for (int k = 0; k < num_kernels; k++) {
-    Image *working_img = NULL;
-    // Create a fresh copy for each kernel since convolution is in-place
-    err = copy_image(base_img, &working_img);
-    if (err != SUCCESS) {
-      fprintf(stderr, "\tError: Could not copy image: %s\n",
-              get_error_string(err));
-      return err;
-    }
-
-    err = run_single_kernel(working_img, img_name, kernels[k], folder, cv_fn);
-
-    // Always free the working copy
-    free_BMP(working_img);
-
-    if (err != SUCCESS) {
-      return err;
-    }
-  }
-  return SUCCESS;
-}
-
-// Level 3: Run on all existing files
-app_error run_all_files(const char *folder, convolve_function cv_fn) {
-  app_error err = create_directories();
-  if (err != SUCCESS) {
-    return err;
-  }
-
-  for (int f = 0; f < num_files; f++) {
-    const char *img_name = files[f];
-    char input_path[PATH_MAX];
-    snprintf(input_path, PATH_MAX, "%s/%s/%s", IMAGES_FOLDER, BASE_FOLDER,
-             img_name);
-
-    printf("\nProcessing file: %s\n", input_path);
-
-    // Load base image once per file
-    Image *base_img = NULL;
-    // Note: read_BMP takes (Image **, const char *) based on previous edits
-    err = read_BMP(&base_img, input_path);
-    if (err != SUCCESS) {
-      fprintf(stderr, "\tError: Could not read base file %s: %s\n", input_path,
-              get_error_string(err));
-      return err;
-    }
-
-    // Run all kernels on this file
-    err = run_all_kernels(base_img, img_name, folder, cv_fn);
-
-    // Free base image
-    free_BMP(base_img);
-
-    if (err != SUCCESS) {
-      return err;
-    }
-  }
-  return SUCCESS;
-}
-
-// Wrapper for Serial Benchmark
 app_error run_benchmark_serial(void) {
-  printf("\n--- Starting Serial Benchmark ---\n");
-  return run_all_files(SERIAL_FOLDER, convolve_serial);
+  int rank;
+  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+  if (rank == 0) {
+    printf("\n--- Starting Serial Benchmark ---\n");
+    return run_all_files(SERIAL_FOLDER, convolve_serial);
+  }
+  return SUCCESS;
 }
 
-// Wrapper for Parallel Benchmark
-app_error run_benchmark_parallel(void) {
-  printf("\n--- Starting Parallel Benchmark ---\n");
-  return run_all_files(PARALLEL_FOLDER, convolve_parallel);
+app_error run_benchmark_parallel_multithreaded(void) {
+  int rank;
+  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+  if (rank == 0) {
+    printf("\n--- Starting Parallel Benchmark (Multithreaded) ---\n");
+    return run_all_files(PARALLEL_MULTITHREADED_FOLDER,
+                         convolve_parallel_multithreaded);
+  }
+  return SUCCESS;
+}
+
+app_error run_benchmark_parallel_distributed_fs(void) {
+  int rank;
+  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+  if (rank == 0) {
+    printf("\n--- Starting Parallel Benchmark (Distributed Filesystem) ---\n");
+  }
+  // All ranks participate in Distributed FS benchmark
+  return run_all_files(PARALLEL_DISTRIBUTED_FS_FOLDER,
+                       convolve_parallel_distributed_filesystem);
+}
+
+app_error run_benchmark_parallel_shared_fs(void) {
+  int rank;
+  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+  if (rank == 0) {
+    printf("\n--- Starting Parallel Benchmark (Shared Filesystem) ---\n");
+    return run_all_files(PARALLEL_SHARED_FS_FOLDER,
+                         convolve_parallel_shared_filesystem);
+  }
+  return SUCCESS;
+}
+
+app_error verify_implementation(const char *kernel_dir, const char *impl_folder,
+                                const char *img_name, Image *img_serial,
+                                int *mismatches) {
+  char path[PATH_MAX];
+  snprintf(path, PATH_MAX, "%s/%s/%s/%s", IMAGES_FOLDER, kernel_dir,
+           impl_folder, img_name);
+
+  Image *img_parallel = NULL;
+  app_error err = read_BMP(&img_parallel, path);
+  if (err) {
+    fprintf(stderr, "\tError reading %s output: %s\n", impl_folder, path);
+    (*mismatches)++;
+    return err;
+  }
+
+  err = check_images_match(img_serial, img_parallel);
+  if (err) {
+    fprintf(stderr, RED "\tMismatch found in kernel %s (%s)\n" RESET,
+            kernel_dir, impl_folder);
+    (*mismatches)++;
+  } else {
+    printf(GREEN "\t%s (%s): Match\n" RESET, kernel_dir, impl_folder);
+  }
+
+  free_BMP(img_parallel);
+  return err;
 }
 
 app_error run_verification(void) {
   printf("\n--- Starting Verification ---\n");
-  app_error err = SUCCESS;
-  int mismatches = 0;
 
+  int mismatches = 0;
+  app_error err = SUCCESS;
   for (int f = 0; f < num_files; f++) {
     const char *img_name = files[f];
     printf("\nVerifying file: %s\n", img_name);
 
-    for (int k = 0; k < num_kernels; k++) {
-      const char *dir = kernels[k].directory;
+    for (int k = 0; k < NUM_KERNELS; k++) {
+      const char *kernel_name = CONV_KERNELS[k].name;
       char serial_path[PATH_MAX];
-      char parallel_path[PATH_MAX];
 
-      snprintf(serial_path, PATH_MAX, "%s/%s/%s/%s", IMAGES_FOLDER, dir,
+      snprintf(serial_path, PATH_MAX, "%s/%s/%s/%s", IMAGES_FOLDER, kernel_name,
                SERIAL_FOLDER, img_name);
-      snprintf(parallel_path, PATH_MAX, "%s/%s/%s/%s", IMAGES_FOLDER, dir,
-               PARALLEL_FOLDER, img_name);
 
       Image *img_serial = NULL;
-      Image *img_parallel = NULL;
 
-      // Note: read_BMP takes (Image **, const char *)
-      if (read_BMP(&img_serial, serial_path) != SUCCESS) {
+      err = read_BMP(&img_serial, serial_path);
+      if (err) {
         fprintf(stderr, "\tError reading serial output: %s\n", serial_path);
         mismatches++;
         continue;
       }
-      if (read_BMP(&img_parallel, parallel_path) != SUCCESS) {
-        fprintf(stderr, "\tError reading parallel output: %s\n", parallel_path);
-        free_BMP(img_serial);
-        mismatches++;
-        continue;
-      }
 
-      if (check_images_match(img_serial, img_parallel) != SUCCESS) {
-        fprintf(stderr, "\tMismatch found in kernel %s\n", kernels[k].name);
-        mismatches++;
-      } else {
-        printf("\t%s: Match\n", kernels[k].name);
-      }
+      (void)verify_implementation(kernel_name, PARALLEL_MULTITHREADED_FOLDER,
+                                  img_name, img_serial, &mismatches);
+      (void)verify_implementation(kernel_name, PARALLEL_DISTRIBUTED_FS_FOLDER,
+                                  img_name, img_serial, &mismatches);
+      (void)verify_implementation(kernel_name, PARALLEL_SHARED_FS_FOLDER,
+                                  img_name, img_serial, &mismatches);
 
       free_BMP(img_serial);
-      free_BMP(img_parallel);
     }
   }
 

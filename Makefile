@@ -1,4 +1,4 @@
-CLUSTERS = 1
+CLUSTERS = 10
 THREADS = 10
 CC = mpicc
 RUN = mpirun
@@ -15,15 +15,15 @@ PERFORMANCE_FLAGS = -O3 -ffast-math -flto
 CFLAGS = $(OMP_FLAGS) $(ERROR_FLAGS) $(PERFORMANCE_FLAGS)
 
 SRC = $(shell find src -name "*.c")
-BIN = bin/main
+BIN = bin/mpi_omp_convolution
+
+run: setup build execute
 
 build:
 	$(CC) $(CFLAGS) $(SRC) -o $(BIN)
 
 execute:
 	$(RUN) -n $(CLUSTERS) $(BIN) $(THREADS)
-
-run: setup build execute
 
 clean:
 	find images -mindepth 1 -maxdepth 1 -not -name 'base' -exec rm -rf {} +
