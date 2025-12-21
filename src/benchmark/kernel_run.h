@@ -2,9 +2,9 @@
 #define __KERNEL_RUN_H__
 
 #include "../bmp/bmp_io.h"
+#include "../constants/files.h"
 #include "../constants/kernel.h"
 #include "../errors/errors.h"
-
 // Callback type for convolution functions
 typedef app_error (*convolve_function)(Image *, Kernel, double *);
 
@@ -21,7 +21,7 @@ typedef app_error (*convolve_function)(Image *, Kernel, double *);
  */
 app_error run_single_kernel(Image *img, const char *img_name, Kernel kernel,
                             const char *benchmark_type_folder,
-                            convolve_function cv_fn);
+                            convolve_function cv_fn, double *elapsed_time);
 
 /**
  * @brief Runs all defined kernels on an image.
@@ -34,7 +34,8 @@ app_error run_single_kernel(Image *img, const char *img_name, Kernel kernel,
  */
 app_error run_all_kernels(Image *base_img, const char *img_name,
                           const char *benchmark_type_folder,
-                          convolve_function cv_fn);
+                          convolve_function cv_fn,
+                          double elapsed_time[KERNEL_TYPES]);
 
 /**
  * @brief Runs all defined kernels on all images in the base folder.
@@ -44,6 +45,7 @@ app_error run_all_kernels(Image *base_img, const char *img_name,
  * @return app_error
  */
 app_error run_all_files(const char *benchmark_type_folder,
-                        convolve_function cv_fn);
+                        convolve_function cv_fn,
+                        double elapsed_time[BENCHMARK_FILES][KERNEL_TYPES]);
 
 #endif

@@ -1,5 +1,10 @@
 #include "benchmark/benchmark.h"
+#include "bmp/bmp_io.h"
+#include "constants/files.h"
+#include "constants/kernel.h"
 #include "errors/errors.h"
+#include "file_utils/file_utils.h"
+#include <limits.h>
 #include <mpi.h>
 #include <omp.h>
 #include <stdio.h>
@@ -46,8 +51,6 @@ int main(int argc, char **argv) {
   }
 
 #ifdef TEST_MULTITHREADED
-
-  // RUN PARALLEL MULTITHREADED
   err = run_benchmark_parallel_multithreaded();
   if (err != SUCCESS) {
     if (comm_rank == 0)
@@ -60,7 +63,6 @@ int main(int argc, char **argv) {
 #endif
 
 #ifdef TEST_DISTRIBUTED_FS
-  // RUN PARALLEL DISTRIBUTED FS
   err = run_benchmark_parallel_distributed_fs();
   if (err != SUCCESS) {
     if (comm_rank == 0)
@@ -69,12 +71,11 @@ int main(int argc, char **argv) {
           "Parallel benchmark (Distributed Filesystem) failed with error: %s\n",
           get_error_string(err));
     MPI_Finalize();
-    return 4;
+    return 3;
   }
 #endif
 
 #ifdef TEST_SHARED_FS
-  // RUN PARALLEL SHARED FS
   err = run_benchmark_parallel_shared_fs();
   if (err != SUCCESS) {
     if (comm_rank == 0)
@@ -82,11 +83,10 @@ int main(int argc, char **argv) {
               "Parallel benchmark (Shared Filesystem) failed with error: %s\n",
               get_error_string(err));
     MPI_Finalize();
-    return 3;
+    return 4;
   }
 #endif
 
-  // CHECK THE IMAGES MATCH AGAINST THE SERIAL OUTPUT
   if (comm_rank == 0) {
     err = run_verification();
     if (err != SUCCESS) {
@@ -94,6 +94,41 @@ int main(int argc, char **argv) {
               get_error_string(err));
       MPI_Finalize();
       return -1;
+    }
+
+    // Write results to CSV
+    err = init_benchmark_csv(CSV_FILE);
+    if (err != SUCCESS) {
+      fprintf(stderr, "Failed to initialize CSV file: %s\n",
+              get_error_string(err));
+    } else {
+      for (int f = 0; f < BENCHMARK_FILES; f++) {
+        // Read file to get dimensions
+        char input_path[PATH_MAX];
+        snprintf(input_path, PATH_MAX, "%s/%s/%s", IMAGES_FOLDER, BASE_FOLDER,
+                 files[f]);
+        Image *img = NULL;
+        if (read_BMP(&img, input_path) == SUCCESS) {
+          int width = img->width;
+          int height = img->height;
+
+          for (int k = 0; k < KERNEL_TYPES; k++) {
+            double serial_time = benchmark_data[0][f][k];
+            double multithreaded_time = benchmark_data[1][f][k];
+            double distributed_time = benchmark_data[2][f][k];
+            double shared_time = benchmark_data[3][f][k];
+
+            append_benchmark_result(
+                CSV_FILE, width, height, CONV_KERNELS[k].name, comm_size,
+                omp_threads, serial_time, multithreaded_time, distributed_time,
+                shared_time);
+          }
+          free_BMP(img);
+        } else {
+          fprintf(stderr, "Failed to read image %s for info\n", input_path);
+        }
+      }
+      printf("\nBenchmark results written to %s\n", CSV_FILE);
     }
   }
 

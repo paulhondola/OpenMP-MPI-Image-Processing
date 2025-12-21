@@ -29,9 +29,9 @@ app_error init_benchmark_csv(const char *filename);
  *         - SUCCESS: Result appended successfully
  *         - ERR_FILE_OPEN: Could not open file for appending
  */
-app_error append_benchmark_result(const char *filename, int image_size,
-                                  const char *operation, int clusters,
-                                  int threads, double serial_time,
+app_error append_benchmark_result(const char *filename, int image_width,
+                                  int image_height, const char *operation,
+                                  int clusters, int threads, double serial_time,
                                   double multithreaded_time,
                                   double distributed_time, double shared_time);
 
