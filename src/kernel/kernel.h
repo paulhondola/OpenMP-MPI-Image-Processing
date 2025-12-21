@@ -7,7 +7,6 @@
  */
 typedef struct {
   const char *name;
-  const char *directory;
   int size;
   const double *data;
 } Kernel;

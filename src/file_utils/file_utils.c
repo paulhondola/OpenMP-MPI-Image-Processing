@@ -15,6 +15,7 @@ const int num_files = sizeof(files) / sizeof(files[0]);
 const char *IMAGES_FOLDER = "images";
 const char *BASE_FOLDER = "base";
 const char *SERIAL_FOLDER = "serial";
+const char *PARALLEL_MULTITHREADED_FOLDER = "parallel_multithreaded";
 const char *PARALLEL_DISTRIBUTED_FS_FOLDER = "parallel_distributed";
 const char *PARALLEL_SHARED_FS_FOLDER = "parallel_shared";
 
