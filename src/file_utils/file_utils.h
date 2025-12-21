@@ -17,8 +17,8 @@ app_error init_benchmark_csv(const char *filename);
  * Appends a benchmark result row to the CSV file.
  * Automatically calculates speedup and efficiency.
  * @param filename Name of the CSV file
- * @param image_size Size of the image
- * @param operation Name of the operation/benchmark
+ * @param pixel_count Number of pixels in the image
+ * @param kernel_size Size of the kernel
  * @param clusters Number of clusters (or processes)
  * @param threads Number of threads
  * @param serial_time Time taken for serial execution
@@ -29,10 +29,9 @@ app_error init_benchmark_csv(const char *filename);
  *         - SUCCESS: Result appended successfully
  *         - ERR_FILE_OPEN: Could not open file for appending
  */
-app_error append_benchmark_result(const char *filename, int image_width,
-                                  int image_height, const char *operation,
-                                  int clusters, int threads, double serial_time,
-                                  double multithreaded_time,
+app_error append_benchmark_result(const char *filename, int pixel_count,
+                                  int kernel_size, int clusters, int threads,
+                                  double serial_time, double multithreaded_time,
                                   double distributed_time, double shared_time);
 
 /**

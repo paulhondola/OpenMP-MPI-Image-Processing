@@ -5,8 +5,10 @@
 #include "../constants/files.h"
 #include "../constants/kernel.h"
 #include "../errors/errors.h"
+
 // Callback type for convolution functions
-typedef app_error (*convolve_function)(Image *, Kernel, double *);
+typedef app_error (*convolve_function)(Image *img, Kernel ker,
+                                       double *elapsed_time);
 
 /**
  * @brief Runs a single kernel on an image and saves the output.
