@@ -16,7 +16,9 @@ app_error run_benchmark_serial(void) {
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
   if (rank == 0) {
     printf("\n--- Starting Serial Benchmark ---\n");
-    return run_all_files(SERIAL_FOLDER, convolve_serial);
+    app_error err =
+        run_all_files(SERIAL_FOLDER, convolve_serial, benchmark_data[0]);
+    return err;
   }
   return SUCCESS;
 }
@@ -27,7 +29,7 @@ app_error run_benchmark_parallel_multithreaded(void) {
   if (rank == 0) {
     printf("\n--- Starting Parallel Benchmark (Multithreaded) ---\n");
     return run_all_files(PARALLEL_MULTITHREADED_FOLDER,
-                         convolve_parallel_multithreaded);
+                         convolve_parallel_multithreaded, benchmark_data[1]);
   }
   return SUCCESS;
 }
@@ -40,7 +42,8 @@ app_error run_benchmark_parallel_distributed_fs(void) {
   }
   // All ranks participate in Distributed FS benchmark
   return run_all_files(PARALLEL_DISTRIBUTED_FS_FOLDER,
-                       convolve_parallel_distributed_filesystem);
+                       convolve_parallel_distributed_filesystem,
+                       benchmark_data[2]);
 }
 
 app_error run_benchmark_parallel_shared_fs(void) {
@@ -49,7 +52,8 @@ app_error run_benchmark_parallel_shared_fs(void) {
   if (rank == 0) {
     printf("\n--- Starting Parallel Benchmark (Shared Filesystem) ---\n");
     return run_all_files(PARALLEL_SHARED_FS_FOLDER,
-                         convolve_parallel_shared_filesystem);
+                         convolve_parallel_shared_filesystem,
+                         benchmark_data[3]);
   }
   return SUCCESS;
 }
@@ -87,11 +91,11 @@ app_error run_verification(void) {
 
   int mismatches = 0;
   app_error err = SUCCESS;
-  for (int f = 0; f < num_files; f++) {
+  for (int f = 0; f < BENCHMARK_FILES; f++) {
     const char *img_name = files[f];
     printf("\nVerifying file: %s\n", img_name);
 
-    for (int k = 0; k < NUM_KERNELS; k++) {
+    for (int k = 0; k < KERNEL_TYPES; k++) {
       const char *kernel_name = CONV_KERNELS[k].name;
       char serial_path[PATH_MAX];
 
@@ -102,13 +106,18 @@ app_error run_verification(void) {
 
       err = read_BMP(&img_serial, serial_path);
       if (err) {
-        fprintf(stderr, "\tError reading serial output: %s\n", serial_path);
+        fprintf(stderr, "\tError reading serial output: %s | ERROR CODE: %s\n",
+                serial_path, get_error_string(err));
         mismatches++;
         continue;
       }
 
-      (void)verify_implementation(kernel_name, PARALLEL_MULTITHREADED_FOLDER,
+      err = verify_implementation(kernel_name, PARALLEL_MULTITHREADED_FOLDER,
                                   img_name, img_serial, &mismatches);
+
+      if (err)
+        fprintf(stderr, "%s\n", get_error_string(err));
+
       (void)verify_implementation(kernel_name, PARALLEL_DISTRIBUTED_FS_FOLDER,
                                   img_name, img_serial, &mismatches);
       (void)verify_implementation(kernel_name, PARALLEL_SHARED_FS_FOLDER,

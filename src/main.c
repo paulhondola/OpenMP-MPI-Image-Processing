@@ -1,5 +1,10 @@
 #include "benchmark/benchmark.h"
+#include "bmp/bmp_io.h"
+#include "constants/files.h"
+#include "constants/kernel.h"
 #include "errors/errors.h"
+#include "file_utils/file_utils.h"
+#include <limits.h>
 #include <mpi.h>
 #include <omp.h>
 #include <stdio.h>
@@ -23,6 +28,101 @@ void init_mpi(int argc, char **argv, int *comm_rank, int *comm_size,
   omp_set_num_threads(*omp_threads);
 }
 
+app_error run_benchmarks(int comm_rank) {
+  app_error err = SUCCESS;
+
+  // RUN SERIAL
+  err = run_benchmark_serial();
+  if (err != SUCCESS) {
+    if (comm_rank == 0)
+      fprintf(stderr, "Serial benchmark failed with error: %s\n",
+              get_error_string(err));
+    return err;
+  }
+
+#ifdef TEST_MULTITHREADED
+  err = run_benchmark_parallel_multithreaded();
+  if (err != SUCCESS) {
+    if (comm_rank == 0)
+      fprintf(stderr,
+              "Parallel benchmark (Multithreaded) failed with error: %s\n",
+              get_error_string(err));
+    return err;
+  }
+#endif
+
+#ifdef TEST_DISTRIBUTED_FS
+  err = run_benchmark_parallel_distributed_fs();
+  if (err != SUCCESS) {
+    if (comm_rank == 0)
+      fprintf(
+          stderr,
+          "Parallel benchmark (Distributed Filesystem) failed with error: %s\n",
+          get_error_string(err));
+    return err;
+  }
+#endif
+
+#ifdef TEST_SHARED_FS
+  err = run_benchmark_parallel_shared_fs();
+  if (err != SUCCESS) {
+    if (comm_rank == 0)
+      fprintf(stderr,
+              "Parallel benchmark (Shared Filesystem) failed with error: %s\n",
+              get_error_string(err));
+    return err;
+  }
+#endif
+
+  return err;
+}
+
+app_error write_benchmark_results(int comm_size, int omp_threads) {
+  // Write results to CSV
+  app_error err = init_benchmark_csv(CSV_FILE);
+  if (err != SUCCESS) {
+    fprintf(stderr, "Failed to initialize CSV file: %s\n",
+            get_error_string(err));
+    return err;
+  }
+
+  for (int f = 0; f < BENCHMARK_FILES; f++) {
+    // Read file to get dimensions
+    char input_path[PATH_MAX];
+    snprintf(input_path, PATH_MAX, "%s/%s/%s", IMAGES_FOLDER, BASE_FOLDER,
+             files[f]);
+    Image *img = NULL;
+    if (read_BMP(&img, input_path) == SUCCESS) {
+      int width = img->width;
+      int height = img->height;
+
+      for (int k = 0; k < KERNEL_TYPES; k++) {
+        double serial_time = benchmark_data[0][f][k];
+        double multithreaded_time = benchmark_data[1][f][k];
+        double distributed_time = benchmark_data[2][f][k];
+        double shared_time = benchmark_data[3][f][k];
+
+        err = append_benchmark_result(
+            CSV_FILE, width * height, CONV_KERNELS[k].size, comm_size,
+            omp_threads, serial_time, multithreaded_time, distributed_time,
+            shared_time);
+
+        if (err != SUCCESS) {
+          fprintf(stderr, "Failed to append result: %s\n",
+                  get_error_string(err));
+          return err;
+        }
+      }
+      free_BMP(img);
+    } else {
+      fprintf(stderr, "Failed to read image %s for info\n", input_path);
+    }
+  }
+  printf("\nBenchmark results written to %s\n", CSV_FILE);
+
+  return err;
+}
+
 int main(int argc, char **argv) {
   int comm_rank, comm_size, omp_threads;
   init_mpi(argc, argv, &comm_rank, &comm_size, &omp_threads);
@@ -33,67 +133,30 @@ int main(int argc, char **argv) {
     printf("Filesystem Mode: Distributed\n");
   }
 
-  app_error err = SUCCESS;
-
-  // RUN SERIAL
-  err = run_benchmark_serial();
+  // Run all benchmarks
+  app_error err = run_benchmarks(comm_rank);
   if (err != SUCCESS) {
-    if (comm_rank == 0)
-      fprintf(stderr, "Serial benchmark failed with error: %s\n",
-              get_error_string(err));
     MPI_Finalize();
-    return 1;
+    return err;
   }
 
-#ifdef TEST_MULTITHREADED
-
-  // RUN PARALLEL MULTITHREADED
-  err = run_benchmark_parallel_multithreaded();
-  if (err != SUCCESS) {
-    if (comm_rank == 0)
-      fprintf(stderr,
-              "Parallel benchmark (Multithreaded) failed with error: %s\n",
-              get_error_string(err));
-    MPI_Finalize();
-    return 2;
-  }
-#endif
-
-#ifdef TEST_DISTRIBUTED_FS
-  // RUN PARALLEL DISTRIBUTED FS
-  err = run_benchmark_parallel_distributed_fs();
-  if (err != SUCCESS) {
-    if (comm_rank == 0)
-      fprintf(
-          stderr,
-          "Parallel benchmark (Distributed Filesystem) failed with error: %s\n",
-          get_error_string(err));
-    MPI_Finalize();
-    return 4;
-  }
-#endif
-
-#ifdef TEST_SHARED_FS
-  // RUN PARALLEL SHARED FS
-  err = run_benchmark_parallel_shared_fs();
-  if (err != SUCCESS) {
-    if (comm_rank == 0)
-      fprintf(stderr,
-              "Parallel benchmark (Shared Filesystem) failed with error: %s\n",
-              get_error_string(err));
-    MPI_Finalize();
-    return 3;
-  }
-#endif
-
-  // CHECK THE IMAGES MATCH AGAINST THE SERIAL OUTPUT
   if (comm_rank == 0) {
+    // Run verification
     err = run_verification();
     if (err != SUCCESS) {
       fprintf(stderr, "Verification failed with error: %s\n",
               get_error_string(err));
       MPI_Finalize();
-      return -1;
+      return err;
+    }
+
+    // Write results to CSV
+    err = write_benchmark_results(comm_size, omp_threads);
+    if (err != SUCCESS) {
+      fprintf(stderr, "Failed to write benchmark results: %s\n",
+              get_error_string(err));
+      MPI_Finalize();
+      return err;
     }
   }
 

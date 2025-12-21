@@ -56,15 +56,14 @@ app_error create_directories(void) {
 // Level 1: Run a single kernel on a single file
 app_error run_single_kernel(Image *img, const char *img_name, Kernel kernel,
                             const char *benchmark_type_folder,
-                            convolve_function cv_fn) {
+                            convolve_function cv_fn, double *elapsed_time) {
   int rank;
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 
   if (rank == 0)
     printf("\tApplying kernel: %s\n", kernel.name);
 
-  double elapsed_time = 0.0;
-  app_error err = cv_fn(img, kernel, &elapsed_time);
+  app_error err = cv_fn(img, kernel, elapsed_time);
   if (err) {
     if (rank == 0)
       fprintf(stderr, "\tError executing kernel %s: %d\n", kernel.name, err);
@@ -73,7 +72,7 @@ app_error run_single_kernel(Image *img, const char *img_name, Kernel kernel,
 
   // Only rank 0 saves the image and logs
   if (rank == 0) {
-    printf("\tTime: %.6f s\n", elapsed_time);
+    printf("\tTime: %.6f s\n", *elapsed_time);
     char output_path[PATH_MAX];
     snprintf(output_path, PATH_MAX, "%s/%s/%s/%s", IMAGES_FOLDER, kernel.name,
              benchmark_type_folder, img_name);
@@ -93,12 +92,13 @@ app_error run_single_kernel(Image *img, const char *img_name, Kernel kernel,
 // Level 2: Run all kernels on a single file
 app_error run_all_kernels(Image *base_img, const char *img_name,
                           const char *benchmark_type_folder,
-                          convolve_function cv_fn) {
+                          convolve_function cv_fn,
+                          double elapsed_time[KERNEL_TYPES]) {
   app_error err = SUCCESS;
   int rank;
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 
-  for (int k = 0; k < NUM_KERNELS; k++) {
+  for (int k = 0; k < KERNEL_TYPES; k++) {
     Image *working_img = NULL;
 
     // Rank 0 creates a copy, others just pass NULL (or whatever they possess)
@@ -121,7 +121,7 @@ app_error run_all_kernels(Image *base_img, const char *img_name,
     }
 
     err = run_single_kernel(working_img, img_name, CONV_KERNELS[k],
-                            benchmark_type_folder, cv_fn);
+                            benchmark_type_folder, cv_fn, &elapsed_time[k]);
 
     // Always free the working copy
     if (rank == 0)
@@ -135,7 +135,8 @@ app_error run_all_kernels(Image *base_img, const char *img_name,
 
 // Level 3: Run on all existing files
 app_error run_all_files(const char *benchmark_type_folder,
-                        convolve_function cv_fn) {
+                        convolve_function cv_fn,
+                        double elapsed_time[BENCHMARK_FILES][KERNEL_TYPES]) {
   app_error err = create_directories();
   if (err)
     return err;
@@ -143,7 +144,7 @@ app_error run_all_files(const char *benchmark_type_folder,
   int rank;
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 
-  for (int f = 0; f < num_files; f++) {
+  for (int f = 0; f < BENCHMARK_FILES; f++) {
     const char *img_name = files[f];
 
     if (rank == 0) {
@@ -169,7 +170,8 @@ app_error run_all_files(const char *benchmark_type_folder,
     }
 
     // Run all kernels on this file
-    err = run_all_kernels(base_img, img_name, benchmark_type_folder, cv_fn);
+    err = run_all_kernels(base_img, img_name, benchmark_type_folder, cv_fn,
+                          elapsed_time[f]);
 
     // Free base image
     if (rank == 0)

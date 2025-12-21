@@ -43,10 +43,9 @@ app_error init_benchmark_csv(const char *filename) {
   return SUCCESS;
 }
 
-app_error append_benchmark_result(const char *filename, int image_size,
-                                  const char *operation, int clusters,
-                                  int threads, double serial_time,
-                                  double multithreaded_time,
+app_error append_benchmark_result(const char *filename, int pixel_count,
+                                  int kernel_size, int clusters, int threads,
+                                  double serial_time, double multithreaded_time,
                                   double distributed_time, double shared_time) {
   FILE *fp = fopen(filename, "a");
   if (fp == NULL) {
@@ -58,7 +57,7 @@ app_error append_benchmark_result(const char *filename, int image_size,
   double distributed_speedup = serial_time / distributed_time;
   double shared_speedup = serial_time / shared_time;
 
-  fprintf(fp, "%d,%s,%d,%d,%.6f,%.6f,%.6f,%.6f\n", image_size, operation,
+  fprintf(fp, "%d,%d,%d,%d,%.6f,%.6f,%.6f,%.6f\n", pixel_count, kernel_size,
           clusters, threads, serial_time, multithreaded_speedup,
           distributed_speedup, shared_speedup);
 
