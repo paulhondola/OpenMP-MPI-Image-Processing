@@ -19,6 +19,13 @@ app_error run_benchmark_serial(void);
 
 /**
  * Runs the parallel version of the image processing benchmark.
+ * Uses OpenMP for shared memory parallelism.
+ * @return app_error code
+ */
+app_error run_benchmark_parallel_multithreaded(void);
+
+/**
+ * Runs the parallel version of the image processing benchmark.
  * Uses MPI and OpenMP for distributed memory parallelism.
  * @return app_error code
  */
