@@ -1,8 +1,10 @@
 # Test images (too large to commit to github)
 images/
 
+# VSCode Settings
+.vscode/
+
 # AI guidelines
-.gemini/
 .claude/
 .cursor/
 .codex/
