@@ -1,7 +1,6 @@
 #include "file_utils.h"
 #include <errno.h>
 #include <stdio.h>
-#include <string.h>
 #include <sys/stat.h>
 
 // CSV Header for the benchmark data file
@@ -16,7 +15,8 @@ const int num_files = sizeof(files) / sizeof(files[0]);
 const char *IMAGES_FOLDER = "images";
 const char *BASE_FOLDER = "base";
 const char *SERIAL_FOLDER = "serial";
-const char *PARALLEL_FOLDER = "parallel";
+const char *PARALLEL_DISTRIBUTED_FS_FOLDER = "parallel_distributed";
+const char *PARALLEL_SHARED_FS_FOLDER = "parallel_shared";
 
 app_error create_directory(const char *path) {
   if (mkdir(path, 0777) == -1) {

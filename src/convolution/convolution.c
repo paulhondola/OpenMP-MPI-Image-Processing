@@ -65,7 +65,103 @@ app_error convolve_serial(Image *img, Kernel kernel) {
   return SUCCESS;
 }
 
-app_error convolve_parallel(Image *img, Kernel kernel) {
+app_error convolve_parallel_multithreaded(Image *img, Kernel kernel) {
+  int width = img->width;
+  int height = img->height;
+  int k_size = kernel.size;
+  int half_k = k_size / 2;
+
+  Pixel *output = alloc_pixel(width, height);
+  if (!output) {
+    return ERR_MEM_ALLOC;
+  }
+
+  Pixel *restrict output_data = output;
+  const Pixel *restrict input_data = img->data;
+  const double *restrict kernel_data = kernel.data;
+
+#pragma omp parallel for collapse(2) schedule(dynamic)
+  for (int y = 0; y < height; y++) {
+    for (int x = 0; x < width; x++) {
+      double r_acc = 0, g_acc = 0, b_acc = 0;
+
+      for (int ky = 0; ky < k_size; ky++) {
+        for (int kx = 0; kx < k_size; kx++) {
+          int py = y + ky - half_k;
+          int px = x + kx - half_k;
+
+          clamp_to_boundary(&px, &py, width, height);
+
+          Pixel p = input_data[py * width + px];
+          double k_val = kernel_data[ky * k_size + kx];
+
+          r_acc += p.r * k_val;
+          g_acc += p.g * k_val;
+          b_acc += p.b * k_val;
+        }
+      }
+
+      Pixel out_p;
+      clamp_pixel(&out_p, r_acc, g_acc, b_acc);
+      output_data[y * width + x] = out_p;
+    }
+  }
+
+  free(img->data);
+  img->data = output;
+
+  return SUCCESS;
+}
+
+app_error convolve_parallel_distributed_filesystem(Image *img, Kernel kernel) {
+  int width = img->width;
+  int height = img->height;
+  int k_size = kernel.size;
+  int half_k = k_size / 2;
+
+  Pixel *output = alloc_pixel(width, height);
+  if (!output) {
+    return ERR_MEM_ALLOC;
+  }
+
+  Pixel *restrict output_data = output;
+  const Pixel *restrict input_data = img->data;
+  const double *restrict kernel_data = kernel.data;
+
+#pragma omp parallel for collapse(2) schedule(dynamic)
+  for (int y = 0; y < height; y++) {
+    for (int x = 0; x < width; x++) {
+      double r_acc = 0, g_acc = 0, b_acc = 0;
+
+      for (int ky = 0; ky < k_size; ky++) {
+        for (int kx = 0; kx < k_size; kx++) {
+          int py = y + ky - half_k;
+          int px = x + kx - half_k;
+
+          clamp_to_boundary(&px, &py, width, height);
+
+          Pixel p = input_data[py * width + px];
+          double k_val = kernel_data[ky * k_size + kx];
+
+          r_acc += p.r * k_val;
+          g_acc += p.g * k_val;
+          b_acc += p.b * k_val;
+        }
+      }
+
+      Pixel out_p;
+      clamp_pixel(&out_p, r_acc, g_acc, b_acc);
+      output_data[y * width + x] = out_p;
+    }
+  }
+
+  free(img->data);
+  img->data = output;
+
+  return SUCCESS;
+}
+
+app_error convolve_parallel_shared_filesystem(Image *img, Kernel kernel) {
   int width = img->width;
   int height = img->height;
   int k_size = kernel.size;
@@ -118,13 +214,19 @@ app_error check_images_match(Image *img1, Image *img2) {
     return ERR_IMAGE_DIFFERENCE;
   }
 
+  int match = 1;
+
+#pragma omp parallel for shared(match)
   for (int i = 0; i < img1->width * img1->height; i++) {
+    if (!match)
+      continue; // Early exit hint for threads
     if (img1->data[i].r != img2->data[i].r ||
         img1->data[i].g != img2->data[i].g ||
         img1->data[i].b != img2->data[i].b) {
-      return ERR_IMAGE_DIFFERENCE;
+#pragma omp atomic write
+      match = 0;
     }
   }
 
-  return SUCCESS;
+  return match ? SUCCESS : ERR_IMAGE_DIFFERENCE;
 }
