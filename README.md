@@ -26,7 +26,7 @@ This project implements image processing kernels (convolution) using a serial an
     ├── convolution # Convolution implementation (serial vs hybrid parallel)
     ├── errors      # Error handling (app_error enum)
     ├── file_utils  # File and directory utilities (mkdir -p execution)
-    ├── kernel      # Kernel struct usage logic
+    ├── constants   # Constant definitions (kernel weights and image file paths)
     └── main.c      # Entry point
 ```
 
@@ -39,9 +39,9 @@ make setup
 ```
 
 This command initializes:
-- `bin/`, `data/`, `docs/`
+- `bin/`, `data/`, `docs/`, `src/`
 - `images/base` (Put your source BMP images here)
-- Specific output directories for every kernel (Ridge, Edge, Sharpen, BoxBlur, Gaussian, Unsharp) and their serial/parallel subfolders.
+- Note: Specific output directories for every kernel are created automatically by the Make verification or can be created manually if needed.
 
 ## Build and Run
 
@@ -55,7 +55,7 @@ make run
 
 This will:
 1.  **Compile** the source into `bin/main` using `mpicc`.
-2.  **Execute** via `mpirun` with default settings (2 MPI Clusters, 4 OpenMP Threads).
+2.  **Execute** via `mpirun` with default settings (10 MPI Clusters, 10 OpenMP Threads).
 3.  **Process** all images in `images/base`.
 4.  **Save** results to the appropriate `images/[kernel]/[type]` folder.
 
@@ -66,6 +66,14 @@ You can override the number of MPI processes (`CLUSTERS`) and OpenMP threads (`T
 ```bash
 # Example: 4 MPI processes, 8 OpenMP threads per process
 make run CLUSTERS=4 THREADS=8
+```
+
+### 3. Parameter Sweep
+
+To run a parameter sweep across defined cluster and thread counts (defined in Makefile as `CLUSTER_ARRAY` and `THREAD_ARRAY`):
+
+```bash
+make sweep
 ```
 
 ### 3. Build only
