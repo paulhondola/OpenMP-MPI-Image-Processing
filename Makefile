@@ -37,6 +37,9 @@ run_distributed: setup build
 run_shared: setup build
 	$(RUN) -n $(CLUSTERS) $(BIN) -t $(THREADS) -h
 
+run_task_pool: setup build
+	$(RUN) -n $(CLUSTERS) $(BIN) -t $(THREADS) -p
+
 run_all: setup build
 	$(RUN) -n $(CLUSTERS) $(BIN) -t $(THREADS) -a
 
@@ -67,7 +70,12 @@ setup:
 	mkdir -p images
 	mkdir -p images/base
 	touch data/values/time_data.csv
+	touch data/values/serial_data.csv
+	touch data/values/multithreaded_data.csv
+	touch data/values/distributed_data.csv
+	touch data/values/shared_data.csv
+	touch data/values/task_pool_data.csv
 	touch data/values/speedup_data.csv
 	@echo "Done."
 
-.PHONY: setup run execute build clean plot run_serial run_multithreaded run_distributed run_shared run_all
+.PHONY: setup run execute build clean plot run_serial run_multithreaded run_distributed run_shared run_task_pool run_all

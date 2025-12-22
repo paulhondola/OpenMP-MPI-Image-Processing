@@ -58,6 +58,18 @@ app_error run_benchmark_parallel_shared_fs(void) {
   return SUCCESS;
 }
 
+app_error run_benchmark_task_pool(void) {
+  int rank;
+  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+  if (rank == 0) {
+    printf("\n--- Starting Parallel Benchmark (Task Pool) ---\n");
+    // Placeholder: using multithreaded implementation
+    return run_all_files(TASK_POOL_FOLDER, convolve_parallel_multithreaded,
+                         benchmark_data[4]);
+  }
+  return SUCCESS;
+}
+
 app_error verify_implementation(const char *kernel_dir, const char *impl_folder,
                                 const char *img_name, Image *img_serial,
                                 int *mismatches) {
@@ -106,7 +118,7 @@ app_error run_verification(BenchmarkConfig config) {
 
       // Only read serial image if we really need to verify something
       if (config.run_multithreaded || config.run_distributed ||
-          config.run_shared) {
+          config.run_shared || config.run_task_pool) {
         err = read_BMP(&img_serial, serial_path);
         if (err) {
           fprintf(stderr,
@@ -134,6 +146,13 @@ app_error run_verification(BenchmarkConfig config) {
       if (config.run_shared) {
         err = verify_implementation(kernel_name, PARALLEL_SHARED_FS_FOLDER,
                                     img_name, img_serial, &mismatches);
+        if (err)
+          fprintf(stderr, "%s\n", get_error_string(err));
+      }
+
+      if (config.run_task_pool) {
+        err = verify_implementation(kernel_name, TASK_POOL_FOLDER, img_name,
+                                    img_serial, &mismatches);
         if (err)
           fprintf(stderr, "%s\n", get_error_string(err));
       }

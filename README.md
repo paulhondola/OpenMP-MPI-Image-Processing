@@ -60,7 +60,13 @@ This will:
 2.  **Execute** via `mpirun` with default settings (10 MPI Clusters, 10 OpenMP Threads).
 3.  **Process** all images in `images/base`.
 4.  **Save** results to the appropriate `images/[kernel]/[type]` folder.
-5.  **Append** time data to `data/values/time_data.csv`.
+5.  **Append** time data to the corresponding CSV file in `data/values/`:
+    *   `serial_data.csv` (Serial)
+    *   `multithreaded_data.csv` (Parallel Multithreaded)
+    *   `distributed_data.csv` (Parallel Distributed FS)
+    *   `shared_data.csv` (Parallel Shared FS)
+    *   `task_pool_data.csv` (Parallel Task Pool)
+    *   `time_data.csv` (Combined data when running ALL via `-a` or `make run_all`)
 
 ### 2. Available Make Targets
 
@@ -78,6 +84,9 @@ make run_distributed
 
 # Run Parallel Shared Filesystem benchmark
 make run_shared
+
+# Run Parallel Task Pool benchmark
+make run_task_pool
 
 # Run All benchmarks
 make run_all
@@ -97,16 +106,19 @@ You can run the benchmark binary directly to control which modes are executed. T
 bin/mpi_omp_convolution -t <threads> [mode flags]
 ```
 
-**Flags:**
-- `-t <n>`: Set number of OpenMP threads (default: 10).
-- `-s`: Run **Serial** benchmark.
-- `-m`: Run **Parallel Multithreaded** benchmark.
-- `-d`: Run **Parallel Distributed Filesystem** benchmark.
-- `-h`: Run **Parallel Shared Filesystem** benchmark.
-- `-a`: Run **All** benchmarks.
-- `--help`: Display usage information.
+# Flags:
+# -t <n> : Set number of OpenMP threads
+# -s     : proper Serial benchmark
+# -m     : Parallel Multithreaded benchmark
+# -d     : Parallel Distributed Filesystem benchmark
+# -h     : Parallel Shared Filesystem benchmark
+# -p     : Parallel Task Pool benchmark
+# -a     : All benchmarks
+# --help : Show usage
 
-**Important:** Verification compares parallel outputs against serial outputs. You must run the Serial benchmark (`-s`) at least once to generate the reference images, otherwise verification will fail.
+# Example: Run distributed with 4 threads
+mpirun -n 10 bin/mpi_omp_convolution -t 4 -d
+compares parallel outputs against serial outputs. You must run the Serial benchmark (`-s`) at least once to generate the reference images, otherwise verification will fail.
 
 **Examples:**
 ```bash

@@ -8,6 +8,7 @@ typedef struct {
   unsigned int run_multithreaded : 1;
   unsigned int run_distributed : 1;
   unsigned int run_shared : 1;
+  unsigned int run_task_pool : 1;
 } BenchmarkConfig;
 
 /**
@@ -45,6 +46,13 @@ app_error run_benchmark_parallel_distributed_fs(void);
  * @return app_error code
  */
 app_error run_benchmark_parallel_shared_fs(void);
+
+/**
+ * @brief Runs the parallel benchmark using a Task Pool approach.
+ * Currently uses multithreaded implementation as a placeholder.
+ * @return app_error code
+ */
+app_error run_benchmark_task_pool(void);
 
 /**
  * @brief Verifies that the serial and parallel outputs match.

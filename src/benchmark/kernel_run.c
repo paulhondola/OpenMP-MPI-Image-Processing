@@ -49,6 +49,12 @@ app_error create_directories(void) {
     err = create_directory(path);
     if (err)
       return err;
+
+    // Create parallel task pool test folder
+    snprintf(path, PATH_MAX, "%s/%s/%s", IMAGES_FOLDER, dir, TASK_POOL_FOLDER);
+    err = create_directory(path);
+    if (err)
+      return err;
   }
   return SUCCESS;
 }

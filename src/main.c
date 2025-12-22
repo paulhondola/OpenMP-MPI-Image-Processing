@@ -23,6 +23,7 @@ void print_usage(const char *prog_name) {
   printf("  -m      Run Parallel Multithreaded benchmark\n");
   printf("  -d      Run Parallel Distributed Filesystem benchmark\n");
   printf("  -h      Run Parallel Shared Filesystem benchmark\n");
+  printf("  -p      Run Parallel Task Pool benchmark\n");
   printf("  -a      Run All benchmarks\n");
   printf("  --help  Show this help message\n");
   printf("\nIf no mode flags are provided, Distributed mode (-d) is run by "
@@ -35,6 +36,7 @@ void parse_args(int argc, char **argv, BenchmarkConfig *config) {
   config->run_multithreaded = 0;
   config->run_distributed = 0;
   config->run_shared = 0;
+  config->run_task_pool = 0;
 
   bool flags_set = false;
 
@@ -56,11 +58,15 @@ void parse_args(int argc, char **argv, BenchmarkConfig *config) {
     } else if (strcmp(argv[i], "-h") == 0) { // -h for shared (parallel_shared)
       config->run_shared = 1;
       flags_set = true;
+    } else if (strcmp(argv[i], "-p") == 0) { // -p for task pool
+      config->run_task_pool = 1;
+      flags_set = true;
     } else if (strcmp(argv[i], "-a") == 0) {
       config->run_serial = 1;
       config->run_multithreaded = 1;
       config->run_distributed = 1;
       config->run_shared = 1;
+      config->run_task_pool = 1;
       flags_set = true;
     } else {
       fprintf(stderr, "Unknown argument: %s\n", argv[i]);
@@ -139,14 +145,45 @@ app_error run_benchmarks(int comm_rank, BenchmarkConfig config) {
     }
   }
 
+  if (config.run_task_pool) {
+    err = run_benchmark_task_pool();
+    if (err != SUCCESS) {
+      if (comm_rank == 0)
+        fprintf(stderr,
+                "Parallel benchmark (Task Pool) failed with error: %s\n",
+                get_error_string(err));
+      return err;
+    }
+  }
+
   return err;
 }
 
 app_error write_benchmark_results(int comm_size, BenchmarkConfig config) {
-  // Write results to CSV
-  app_error err = init_benchmark_csv(CSV_FILE);
+  // Determine if we are running ALL benchmarks
+  bool run_all = config.run_serial && config.run_multithreaded &&
+                 config.run_distributed && config.run_shared &&
+                 config.run_task_pool;
+
+  // Initialize necessary CSV files
+  app_error err = SUCCESS;
+  if (run_all) {
+    err = init_benchmark_csv(CSV_FILE);
+  } else {
+    if (config.run_serial)
+      err = init_benchmark_csv(SERIAL_CSV_FILE);
+    if (!err && config.run_multithreaded)
+      err = init_benchmark_csv(MULTITHREADED_CSV_FILE);
+    if (!err && config.run_distributed)
+      err = init_benchmark_csv(DISTRIBUTED_CSV_FILE);
+    if (!err && config.run_shared)
+      err = init_benchmark_csv(SHARED_CSV_FILE);
+    if (!err && config.run_task_pool)
+      err = init_benchmark_csv(TASK_POOL_CSV_FILE);
+  }
+
   if (err != SUCCESS) {
-    fprintf(stderr, "Failed to initialize CSV file: %s\n",
+    fprintf(stderr, "Failed to initialize CSV file(s): %s\n",
             get_error_string(err));
     return err;
   }
@@ -163,42 +200,72 @@ app_error write_benchmark_results(int comm_size, BenchmarkConfig config) {
 
       for (int k = 0; k < KERNEL_TYPES; k++) {
         double serial_time = -1;
-        if (config.run_serial) {
+        if (config.run_serial)
           serial_time = benchmark_data[0][f][k];
-        }
 
         double multithreaded_time = -1;
-        if (config.run_multithreaded) {
+        if (config.run_multithreaded)
           multithreaded_time = benchmark_data[1][f][k];
-        }
 
         double distributed_time = -1;
-        if (config.run_distributed) {
+        if (config.run_distributed)
           distributed_time = benchmark_data[2][f][k];
-        }
 
         double shared_time = -1;
-        if (config.run_shared) {
+        if (config.run_shared)
           shared_time = benchmark_data[3][f][k];
+
+        double task_pool_time = -1;
+        if (config.run_task_pool)
+          task_pool_time = benchmark_data[4][f][k];
+
+// Prepare arguments for append
+// Helper block to avoid repetition
+#define APPEND_RESULT(file)                                                    \
+  err = append_benchmark_result(file, width * height, CONV_KERNELS[k].size,    \
+                                comm_size, config.omp_threads, serial_time,    \
+                                multithreaded_time, distributed_time,          \
+                                shared_time, task_pool_time);                  \
+  if (err != SUCCESS) {                                                        \
+    fprintf(stderr, "Failed to append result to %s: %s\n", file,               \
+            get_error_string(err));                                            \
+    return err;                                                                \
+  }
+
+        if (run_all) {
+          APPEND_RESULT(CSV_FILE);
+        } else {
+          if (config.run_serial) {
+            APPEND_RESULT(SERIAL_CSV_FILE);
+          }
+          if (config.run_multithreaded) {
+            APPEND_RESULT(MULTITHREADED_CSV_FILE);
+          }
+          if (config.run_distributed) {
+            APPEND_RESULT(DISTRIBUTED_CSV_FILE);
+          }
+          if (config.run_shared) {
+            APPEND_RESULT(SHARED_CSV_FILE);
+          }
+          if (config.run_task_pool) {
+            APPEND_RESULT(TASK_POOL_CSV_FILE);
+          }
         }
 
-        err = append_benchmark_result(
-            CSV_FILE, width * height, CONV_KERNELS[k].size, comm_size,
-            config.omp_threads, serial_time, multithreaded_time,
-            distributed_time, shared_time);
-
-        if (err != SUCCESS) {
-          fprintf(stderr, "Failed to append result: %s\n",
-                  get_error_string(err));
-          return err;
-        }
+#undef APPEND_RESULT
       }
       free_BMP(img);
     } else {
       fprintf(stderr, "Failed to read image %s for info\n", input_path);
     }
   }
-  printf("\nBenchmark results written to %s\n", CSV_FILE);
+
+  if (run_all) {
+    printf("\nBenchmark results written to %s\n", CSV_FILE);
+  } else {
+    printf("\nBenchmark results written to separate files based on executed "
+           "modes.\n");
+  }
 
   return err;
 }
@@ -219,6 +286,8 @@ int main(int argc, char **argv) {
       printf("Mode: Parallel Distributed Filesystem\n");
     if (config.run_shared)
       printf("Mode: Parallel Shared Filesystem\n");
+    if (config.run_task_pool)
+      printf("Mode: Parallel Task Pool\n");
   }
 
   // Run all benchmarks

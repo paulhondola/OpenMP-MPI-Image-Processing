@@ -2,9 +2,14 @@
 
 // CSV Header for the benchmark data file
 const char *CSV_FILE = "data/values/time_data.csv";
+const char *SERIAL_CSV_FILE = "data/values/serial_data.csv";
+const char *MULTITHREADED_CSV_FILE = "data/values/multithreaded_data.csv";
+const char *DISTRIBUTED_CSV_FILE = "data/values/distributed_data.csv";
+const char *SHARED_CSV_FILE = "data/values/shared_data.csv";
+const char *TASK_POOL_CSV_FILE = "data/values/task_pool_data.csv";
 const char *CSV_HEADER = "Pixel Count,Kernel Size,Clusters,Threads,Serial "
                          "Time,Multithreaded "
-                         "Time,Distributed Time,Shared Time";
+                         "Time,Distributed Time,Shared Time,Task Pool Time";
 
 // Image directories
 const char *IMAGES_FOLDER = "images";
@@ -13,6 +18,7 @@ const char *SERIAL_FOLDER = "serial";
 const char *PARALLEL_MULTITHREADED_FOLDER = "parallel_multithreaded";
 const char *PARALLEL_DISTRIBUTED_FS_FOLDER = "parallel_distributed";
 const char *PARALLEL_SHARED_FS_FOLDER = "parallel_shared";
+const char *TASK_POOL_FOLDER = "task_pool";
 
 // Input files (located in images/base)
 const char *files[] = {"Large.bmp", "XL.bmp", "XXL.bmp"};
