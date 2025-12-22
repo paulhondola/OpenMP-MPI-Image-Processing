@@ -2,20 +2,12 @@
 #define __BENCHMARK_H__
 
 #include "../errors/errors.h"
-#include <stdbool.h>
-// #define TEST_SERIAL
-// #define TEST_MULTITHREADED
-// #define TEST_DISTRIBUTED_FS
-// #define TEST_SHARED_FS
-
-#include <stdbool.h>
-
 typedef struct {
   int omp_threads;
-  bool run_serial;
-  bool run_multithreaded;
-  bool run_distributed;
-  bool run_shared;
+  unsigned int run_serial : 1;
+  unsigned int run_multithreaded : 1;
+  unsigned int run_distributed : 1;
+  unsigned int run_shared : 1;
 } BenchmarkConfig;
 
 /**

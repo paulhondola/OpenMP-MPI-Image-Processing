@@ -62,7 +62,33 @@ This will:
 4.  **Save** results to the appropriate `images/[kernel]/[type]` folder.
 5.  **Append** time data to `data/values/time_data.csv`.
 
-### 2. Manual Execution & Flags
+### 2. Available Make Targets
+
+You can use specific Make targets to run individual benchmark modes:
+
+```bash
+# Run Serial benchmark
+make run_serial
+
+# Run Parallel Multithreaded benchmark
+make run_multithreaded
+
+# Run Parallel Distributed Filesystem benchmark
+make run_distributed
+
+# Run Parallel Shared Filesystem benchmark
+make run_shared
+
+# Run All benchmarks
+make run_all
+```
+
+Custom `CLUSTERS` and `THREADS` can still be passed:
+```bash
+make run_distributed CLUSTERS=4 THREADS=8
+```
+
+### 3. Manual Execution & Flags
 
 You can run the benchmark binary directly to control which modes are executed. This uses the new flag-based configuration system.
 
@@ -78,6 +104,7 @@ bin/mpi_omp_convolution -t <threads> [mode flags]
 - `-d`: Run **Parallel Distributed Filesystem** benchmark.
 - `-h`: Run **Parallel Shared Filesystem** benchmark.
 - `-a`: Run **All** benchmarks.
+- `--help`: Display usage information.
 
 **Important:** Verification compares parallel outputs against serial outputs. You must run the Serial benchmark (`-s`) at least once to generate the reference images, otherwise verification will fail.
 

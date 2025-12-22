@@ -14,36 +14,58 @@
 
 #define DEFAULT_THREAD_COUNT 10
 
+void print_usage(const char *prog_name) {
+  printf("Usage: %s [options]\n", prog_name);
+  printf("Options:\n");
+  printf("  -t <n>  Set number of OpenMP threads (default: %d)\n",
+         DEFAULT_THREAD_COUNT);
+  printf("  -s      Run Serial benchmark\n");
+  printf("  -m      Run Parallel Multithreaded benchmark\n");
+  printf("  -d      Run Parallel Distributed Filesystem benchmark\n");
+  printf("  -h      Run Parallel Shared Filesystem benchmark\n");
+  printf("  -a      Run All benchmarks\n");
+  printf("  --help  Show this help message\n");
+  printf("\nIf no mode flags are provided, Distributed mode (-d) is run by "
+         "default.\n");
+}
+
 void parse_args(int argc, char **argv, BenchmarkConfig *config) {
   config->omp_threads = DEFAULT_THREAD_COUNT;
-  config->run_serial = false;
-  config->run_multithreaded = false;
-  config->run_distributed = false;
-  config->run_shared = false;
+  config->run_serial = 0;
+  config->run_multithreaded = 0;
+  config->run_distributed = 0;
+  config->run_shared = 0;
 
   bool flags_set = false;
 
   for (int i = 1; i < argc; i++) {
-    if (strcmp(argv[i], "-t") == 0 && i + 1 < argc) {
+    if (strcmp(argv[i], "--help") == 0) {
+      print_usage(argv[0]);
+      exit(0);
+    } else if (strcmp(argv[i], "-t") == 0 && i + 1 < argc) {
       config->omp_threads = atoi(argv[++i]);
     } else if (strcmp(argv[i], "-s") == 0) {
-      config->run_serial = true;
+      config->run_serial = 1;
       flags_set = true;
     } else if (strcmp(argv[i], "-m") == 0) {
-      config->run_multithreaded = true;
+      config->run_multithreaded = 1;
       flags_set = true;
     } else if (strcmp(argv[i], "-d") == 0) {
-      config->run_distributed = true;
+      config->run_distributed = 1;
       flags_set = true;
     } else if (strcmp(argv[i], "-h") == 0) { // -h for shared (parallel_shared)
-      config->run_shared = true;
+      config->run_shared = 1;
       flags_set = true;
     } else if (strcmp(argv[i], "-a") == 0) {
-      config->run_serial = true;
-      config->run_multithreaded = true;
-      config->run_distributed = true;
-      config->run_shared = true;
+      config->run_serial = 1;
+      config->run_multithreaded = 1;
+      config->run_distributed = 1;
+      config->run_shared = 1;
       flags_set = true;
+    } else {
+      fprintf(stderr, "Unknown argument: %s\n", argv[i]);
+      print_usage(argv[0]);
+      exit(1);
     }
   }
 
@@ -54,7 +76,7 @@ void parse_args(int argc, char **argv, BenchmarkConfig *config) {
   // just Distributed as that was the active one in the file.
   if (!flags_set) {
     // Default to distributed as per previous default behavior in main
-    config->run_distributed = true;
+    config->run_distributed = 1;
   }
 }
 
