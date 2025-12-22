@@ -34,7 +34,7 @@ app_error run_single_kernel(Image *img, const char *img_name, Kernel kernel,
  * @param cv_fn The convolution function to use.
  * @return app_error
  */
-app_error run_all_kernels(Image *base_img, const char *img_name,
+app_error run_all_kernels(Image *img, const char *img_name,
                           const char *benchmark_type_folder,
                           convolve_function cv_fn,
                           double elapsed_time[KERNEL_TYPES]);

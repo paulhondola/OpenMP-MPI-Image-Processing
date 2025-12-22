@@ -1,10 +1,10 @@
 #include "files.h"
 
 // CSV Header for the benchmark data file
-const char *CSV_FILE = "data/benchmark_data.csv";
+const char *CSV_FILE = "data/values/time_data.csv";
 const char *CSV_HEADER = "Pixel Count,Kernel Size,Clusters,Threads,Serial "
                          "Time,Multithreaded "
-                         "Speedup,Distributed Speedup,Shared Speedup";
+                         "Time,Distributed Time,Shared Time";
 
 // Image directories
 const char *IMAGES_FOLDER = "images";

@@ -1,5 +1,5 @@
-CLUSTERS = 10
-THREADS = 10
+CLUSTERS = 8
+THREADS = 8
 CC = mpicc
 RUN = mpirun
 UNAME_S := $(shell uname -s)
@@ -23,17 +23,32 @@ build:
 	$(CC) $(CFLAGS) $(SRC) -o $(BIN)
 
 execute:
-	$(RUN) -n $(CLUSTERS) $(BIN) $(THREADS)
+	$(RUN) -n $(CLUSTERS) $(BIN) -t $(THREADS) -d
 
-CLUSTER_ARRAY = (2 4 8)
-THREAD_ARRAY = (2 4 8 10)
+run_serial: setup build
+	$(BIN) -s
+
+run_multithreaded: setup build
+	$(BIN) -t $(THREADS) -m
+
+run_distributed: setup build
+	$(RUN) -n $(CLUSTERS) $(BIN) -t $(THREADS) -d
+
+run_shared: setup build
+	$(RUN) -n $(CLUSTERS) $(BIN) -t $(THREADS) -h
+
+run_all: setup build
+	$(RUN) -n $(CLUSTERS) $(BIN) -t $(THREADS) -a
+
+CLUSTER_ARRAY = 2 4 8
+THREAD_ARRAY = 2 4 8
 
 sweep:
-	for C in $(CLUSTER_ARRAY); do
-		for T in $(THREAD_ARRAY); do
-			echo "Running with CLUSTERS=$C, THREADS=$T"
-			$(RUN) -n $C $(BIN) $T
-		done
+	for C in $(CLUSTER_ARRAY); do \
+		for T in $(THREAD_ARRAY); do \
+			echo "Running with CLUSTERS=$$C, THREADS=$$T"; \
+			$(RUN) -n $$C $(BIN) -t $$T -a; \
+		done; \
 	done
 
 plot:
@@ -51,6 +66,8 @@ setup:
 	mkdir -p data
 	mkdir -p images
 	mkdir -p images/base
+	touch data/values/time_data.csv
+	touch data/values/speedup_data.csv
 	@echo "Done."
 
-.PHONY: setup run execute build clean plot
+.PHONY: setup run execute build clean plot run_serial run_multithreaded run_distributed run_shared run_all

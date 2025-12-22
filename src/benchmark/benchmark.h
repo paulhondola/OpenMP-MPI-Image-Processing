@@ -2,9 +2,13 @@
 #define __BENCHMARK_H__
 
 #include "../errors/errors.h"
-#define TEST_MULTITHREADED
-#define TEST_SHARED_FS
-#define TEST_DISTRIBUTED_FS
+typedef struct {
+  int omp_threads;
+  unsigned int run_serial : 1;
+  unsigned int run_multithreaded : 1;
+  unsigned int run_distributed : 1;
+  unsigned int run_shared : 1;
+} BenchmarkConfig;
 
 /**
  * @brief Runs the serial version of the image processing benchmark.
@@ -44,8 +48,9 @@ app_error run_benchmark_parallel_shared_fs(void);
 
 /**
  * @brief Verifies that the serial and parallel outputs match.
+ * @param config Benchmark configuration to determine which verifications to run
  * @return app_error code
  */
-app_error run_verification(void);
+app_error run_verification(BenchmarkConfig config);
 
 #endif

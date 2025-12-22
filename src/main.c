@@ -7,77 +7,142 @@
 #include <limits.h>
 #include <mpi.h>
 #include <omp.h>
+#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
 #define DEFAULT_THREAD_COUNT 10
 
+void print_usage(const char *prog_name) {
+  printf("Usage: %s [options]\n", prog_name);
+  printf("Options:\n");
+  printf("  -t <n>  Set number of OpenMP threads (default: %d)\n",
+         DEFAULT_THREAD_COUNT);
+  printf("  -s      Run Serial benchmark\n");
+  printf("  -m      Run Parallel Multithreaded benchmark\n");
+  printf("  -d      Run Parallel Distributed Filesystem benchmark\n");
+  printf("  -h      Run Parallel Shared Filesystem benchmark\n");
+  printf("  -a      Run All benchmarks\n");
+  printf("  --help  Show this help message\n");
+  printf("\nIf no mode flags are provided, Distributed mode (-d) is run by "
+         "default.\n");
+}
+
+void parse_args(int argc, char **argv, BenchmarkConfig *config) {
+  config->omp_threads = DEFAULT_THREAD_COUNT;
+  config->run_serial = 0;
+  config->run_multithreaded = 0;
+  config->run_distributed = 0;
+  config->run_shared = 0;
+
+  bool flags_set = false;
+
+  for (int i = 1; i < argc; i++) {
+    if (strcmp(argv[i], "--help") == 0) {
+      print_usage(argv[0]);
+      exit(0);
+    } else if (strcmp(argv[i], "-t") == 0 && i + 1 < argc) {
+      config->omp_threads = atoi(argv[++i]);
+    } else if (strcmp(argv[i], "-s") == 0) {
+      config->run_serial = 1;
+      flags_set = true;
+    } else if (strcmp(argv[i], "-m") == 0) {
+      config->run_multithreaded = 1;
+      flags_set = true;
+    } else if (strcmp(argv[i], "-d") == 0) {
+      config->run_distributed = 1;
+      flags_set = true;
+    } else if (strcmp(argv[i], "-h") == 0) { // -h for shared (parallel_shared)
+      config->run_shared = 1;
+      flags_set = true;
+    } else if (strcmp(argv[i], "-a") == 0) {
+      config->run_serial = 1;
+      config->run_multithreaded = 1;
+      config->run_distributed = 1;
+      config->run_shared = 1;
+      flags_set = true;
+    } else {
+      fprintf(stderr, "Unknown argument: %s\n", argv[i]);
+      print_usage(argv[0]);
+      exit(1);
+    }
+  }
+
+  // If no benchmark flags set, default to distributed (original behavior seemed
+  // to default to something or was manual) Or maybe error? For now, let's say
+  // if none set, run nothing or print guidance? Previous behavior was
+  // controlled by compile flags. If no flags are provided, maybe run all? Or
+  // just Distributed as that was the active one in the file.
+  if (!flags_set) {
+    // Default to distributed as per previous default behavior in main
+    config->run_distributed = 1;
+  }
+}
+
 void init_mpi(int argc, char **argv, int *comm_rank, int *comm_size,
-              int *omp_threads) {
+              BenchmarkConfig *config) {
   MPI_Init(&argc, &argv);
   MPI_Comm_rank(MPI_COMM_WORLD, comm_rank);
   MPI_Comm_size(MPI_COMM_WORLD, comm_size);
 
-  if (argc < 2) {
-    *omp_threads = DEFAULT_THREAD_COUNT;
-  } else {
-    *omp_threads = atoi(argv[1]);
-  }
+  parse_args(argc, argv, config);
 
-  omp_set_num_threads(*omp_threads);
+  omp_set_num_threads(config->omp_threads);
 }
 
-app_error run_benchmarks(int comm_rank) {
+app_error run_benchmarks(int comm_rank, BenchmarkConfig config) {
   app_error err = SUCCESS;
 
-  // RUN SERIAL
-  err = run_benchmark_serial();
-  if (err != SUCCESS) {
-    if (comm_rank == 0)
-      fprintf(stderr, "Serial benchmark failed with error: %s\n",
-              get_error_string(err));
-    return err;
+  if (config.run_serial) {
+    err = run_benchmark_serial();
+    if (err != SUCCESS) {
+      if (comm_rank == 0)
+        fprintf(stderr, "Serial benchmark failed with error: %s\n",
+                get_error_string(err));
+      return err;
+    }
   }
 
-#ifdef TEST_MULTITHREADED
-  err = run_benchmark_parallel_multithreaded();
-  if (err != SUCCESS) {
-    if (comm_rank == 0)
-      fprintf(stderr,
-              "Parallel benchmark (Multithreaded) failed with error: %s\n",
-              get_error_string(err));
-    return err;
+  if (config.run_multithreaded) {
+    err = run_benchmark_parallel_multithreaded();
+    if (err != SUCCESS) {
+      if (comm_rank == 0)
+        fprintf(stderr,
+                "Parallel benchmark (Multithreaded) failed with error: %s\n",
+                get_error_string(err));
+      return err;
+    }
   }
-#endif
 
-#ifdef TEST_DISTRIBUTED_FS
-  err = run_benchmark_parallel_distributed_fs();
-  if (err != SUCCESS) {
-    if (comm_rank == 0)
-      fprintf(
-          stderr,
-          "Parallel benchmark (Distributed Filesystem) failed with error: %s\n",
-          get_error_string(err));
-    return err;
+  if (config.run_distributed) {
+    err = run_benchmark_parallel_distributed_fs();
+    if (err != SUCCESS) {
+      if (comm_rank == 0)
+        fprintf(stderr,
+                "Parallel benchmark (Distributed Filesystem) failed with "
+                "error: %s\n",
+                get_error_string(err));
+      return err;
+    }
   }
-#endif
 
-#ifdef TEST_SHARED_FS
-  err = run_benchmark_parallel_shared_fs();
-  if (err != SUCCESS) {
-    if (comm_rank == 0)
-      fprintf(stderr,
-              "Parallel benchmark (Shared Filesystem) failed with error: %s\n",
-              get_error_string(err));
-    return err;
+  if (config.run_shared) {
+    err = run_benchmark_parallel_shared_fs();
+    if (err != SUCCESS) {
+      if (comm_rank == 0)
+        fprintf(
+            stderr,
+            "Parallel benchmark (Shared Filesystem) failed with error: %s\n",
+            get_error_string(err));
+      return err;
+    }
   }
-#endif
 
   return err;
 }
 
-app_error write_benchmark_results(int comm_size, int omp_threads) {
+app_error write_benchmark_results(int comm_size, BenchmarkConfig config) {
   // Write results to CSV
   app_error err = init_benchmark_csv(CSV_FILE);
   if (err != SUCCESS) {
@@ -97,15 +162,30 @@ app_error write_benchmark_results(int comm_size, int omp_threads) {
       int height = img->height;
 
       for (int k = 0; k < KERNEL_TYPES; k++) {
-        double serial_time = benchmark_data[0][f][k];
-        double multithreaded_time = benchmark_data[1][f][k];
-        double distributed_time = benchmark_data[2][f][k];
-        double shared_time = benchmark_data[3][f][k];
+        double serial_time = -1;
+        if (config.run_serial) {
+          serial_time = benchmark_data[0][f][k];
+        }
+
+        double multithreaded_time = -1;
+        if (config.run_multithreaded) {
+          multithreaded_time = benchmark_data[1][f][k];
+        }
+
+        double distributed_time = -1;
+        if (config.run_distributed) {
+          distributed_time = benchmark_data[2][f][k];
+        }
+
+        double shared_time = -1;
+        if (config.run_shared) {
+          shared_time = benchmark_data[3][f][k];
+        }
 
         err = append_benchmark_result(
             CSV_FILE, width * height, CONV_KERNELS[k].size, comm_size,
-            omp_threads, serial_time, multithreaded_time, distributed_time,
-            shared_time);
+            config.omp_threads, serial_time, multithreaded_time,
+            distributed_time, shared_time);
 
         if (err != SUCCESS) {
           fprintf(stderr, "Failed to append result: %s\n",
@@ -124,25 +204,32 @@ app_error write_benchmark_results(int comm_size, int omp_threads) {
 }
 
 int main(int argc, char **argv) {
-  int comm_rank, comm_size, omp_threads;
-  init_mpi(argc, argv, &comm_rank, &comm_size, &omp_threads);
+  int comm_rank, comm_size;
+  BenchmarkConfig config;
+  init_mpi(argc, argv, &comm_rank, &comm_size, &config);
 
   if (comm_rank == 0) {
     printf("Running with %d MPI processes and %d OpenMP threads per process\n",
-           comm_size, omp_threads);
-    printf("Filesystem Mode: Distributed\n");
+           comm_size, config.omp_threads);
+    if (config.run_serial)
+      printf("Mode: Serial\n");
+    if (config.run_multithreaded)
+      printf("Mode: Parallel Multithreaded\n");
+    if (config.run_distributed)
+      printf("Mode: Parallel Distributed Filesystem\n");
+    if (config.run_shared)
+      printf("Mode: Parallel Shared Filesystem\n");
   }
 
   // Run all benchmarks
-  app_error err = run_benchmarks(comm_rank);
+  app_error err = run_benchmarks(comm_rank, config);
   if (err != SUCCESS) {
     MPI_Finalize();
     return err;
   }
-
   if (comm_rank == 0) {
     // Run verification
-    err = run_verification();
+    err = run_verification(config);
     if (err != SUCCESS) {
       fprintf(stderr, "Verification failed with error: %s\n",
               get_error_string(err));
@@ -151,7 +238,7 @@ int main(int argc, char **argv) {
     }
 
     // Write results to CSV
-    err = write_benchmark_results(comm_size, omp_threads);
+    err = write_benchmark_results(comm_size, config);
     if (err != SUCCESS) {
       fprintf(stderr, "Failed to write benchmark results: %s\n",
               get_error_string(err));

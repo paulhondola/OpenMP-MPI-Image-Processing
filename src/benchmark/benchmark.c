@@ -86,7 +86,7 @@ app_error verify_implementation(const char *kernel_dir, const char *impl_folder,
   return err;
 }
 
-app_error run_verification(void) {
+app_error run_verification(BenchmarkConfig config) {
   printf("\n--- Starting Verification ---\n");
 
   int mismatches = 0;
@@ -104,26 +104,43 @@ app_error run_verification(void) {
 
       Image *img_serial = NULL;
 
-      err = read_BMP(&img_serial, serial_path);
-      if (err) {
-        fprintf(stderr, "\tError reading serial output: %s | ERROR CODE: %s\n",
-                serial_path, get_error_string(err));
-        mismatches++;
-        continue;
+      // Only read serial image if we really need to verify something
+      if (config.run_multithreaded || config.run_distributed ||
+          config.run_shared) {
+        err = read_BMP(&img_serial, serial_path);
+        if (err) {
+          fprintf(stderr,
+                  "\tError reading serial output: %s | ERROR CODE: %s\n",
+                  serial_path, get_error_string(err));
+          // If we can't read serial output, we can't verify anything
+          return err;
+        }
       }
 
-      err = verify_implementation(kernel_name, PARALLEL_MULTITHREADED_FOLDER,
-                                  img_name, img_serial, &mismatches);
+      if (config.run_multithreaded) {
+        err = verify_implementation(kernel_name, PARALLEL_MULTITHREADED_FOLDER,
+                                    img_name, img_serial, &mismatches);
+        if (err)
+          fprintf(stderr, "%s\n", get_error_string(err));
+      }
 
-      if (err)
-        fprintf(stderr, "%s\n", get_error_string(err));
+      if (config.run_distributed) {
+        err = verify_implementation(kernel_name, PARALLEL_DISTRIBUTED_FS_FOLDER,
+                                    img_name, img_serial, &mismatches);
+        if (err)
+          fprintf(stderr, "%s\n", get_error_string(err));
+      }
 
-      (void)verify_implementation(kernel_name, PARALLEL_DISTRIBUTED_FS_FOLDER,
-                                  img_name, img_serial, &mismatches);
-      (void)verify_implementation(kernel_name, PARALLEL_SHARED_FS_FOLDER,
-                                  img_name, img_serial, &mismatches);
+      if (config.run_shared) {
+        err = verify_implementation(kernel_name, PARALLEL_SHARED_FS_FOLDER,
+                                    img_name, img_serial, &mismatches);
+        if (err)
+          fprintf(stderr, "%s\n", get_error_string(err));
+      }
 
-      free_BMP(img_serial);
+      if (img_serial) {
+        free_BMP(img_serial);
+      }
     }
   }
 
