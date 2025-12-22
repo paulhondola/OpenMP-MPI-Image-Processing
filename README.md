@@ -15,7 +15,9 @@ This project implements image processing kernels (convolution) using a serial an
 ```
 ├── Makefile        # Compilation, setup, and execution commands
 ├── bin             # Output directory for compiled binary
-├── data            # Output directory for benchmark content (times, plots)
+├── data            # Output directory
+│   ├── values      # CSV files (time_data.csv)
+│   └── plots       # Generated plots
 ├── docs            # Documentation files
 ├── images          # Input and output directory for BMP images
 │   ├── base        # Place input BMP files here
@@ -58,6 +60,38 @@ This will:
 2.  **Execute** via `mpirun` with default settings (10 MPI Clusters, 10 OpenMP Threads).
 3.  **Process** all images in `images/base`.
 4.  **Save** results to the appropriate `images/[kernel]/[type]` folder.
+5.  **Append** time data to `data/values/time_data.csv`.
+
+### 2. Manual Execution & Flags
+
+You can run the benchmark binary directly to control which modes are executed. This uses the new flag-based configuration system.
+
+```bash
+# General syntax
+bin/mpi_omp_convolution -t <threads> [mode flags]
+```
+
+**Flags:**
+- `-t <n>`: Set number of OpenMP threads (default: 10).
+- `-s`: Run **Serial** benchmark.
+- `-m`: Run **Parallel Multithreaded** benchmark.
+- `-d`: Run **Parallel Distributed Filesystem** benchmark.
+- `-h`: Run **Parallel Shared Filesystem** benchmark.
+- `-a`: Run **All** benchmarks.
+
+**Important:** Verification compares parallel outputs against serial outputs. You must run the Serial benchmark (`-s`) at least once to generate the reference images, otherwise verification will fail.
+
+**Examples:**
+```bash
+# Run Serial benchmark (generates reference images)
+bin/mpi_omp_convolution -s
+
+# Run Distributed benchmark with 4 threads per rank
+mpirun -n 4 bin/mpi_omp_convolution -t 4 -d
+
+# Run All benchmarks
+mpirun -n 4 bin/mpi_omp_convolution -t 4 -a
+```
 
 ### 2. Customizing Parallelism
 

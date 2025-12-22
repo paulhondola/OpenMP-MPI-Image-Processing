@@ -53,13 +53,9 @@ app_error append_benchmark_result(const char *filename, int pixel_count,
     return ERR_FILE_OPEN;
   }
 
-  double multithreaded_speedup = serial_time / multithreaded_time;
-  double distributed_speedup = serial_time / distributed_time;
-  double shared_speedup = serial_time / shared_time;
-
   fprintf(fp, "%d,%d,%d,%d,%.6f,%.6f,%.6f,%.6f\n", pixel_count, kernel_size,
-          clusters, threads, serial_time, multithreaded_speedup,
-          distributed_speedup, shared_speedup);
+          clusters, threads, serial_time, multithreaded_time, distributed_time,
+          shared_time);
 
   fclose(fp);
   return SUCCESS;

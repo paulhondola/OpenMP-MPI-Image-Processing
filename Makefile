@@ -25,15 +25,15 @@ build:
 execute:
 	$(RUN) -n $(CLUSTERS) $(BIN) $(THREADS)
 
-CLUSTER_ARRAY = (2 4 8)
-THREAD_ARRAY = (2 4 8 10)
+CLUSTER_ARRAY = 2 4 8
+THREAD_ARRAY = 2 4 8
 
 sweep:
-	for C in $(CLUSTER_ARRAY); do
-		for T in $(THREAD_ARRAY); do
-			echo "Running with CLUSTERS=$C, THREADS=$T"
-			$(RUN) -n $C $(BIN) $T
-		done
+	for C in $(CLUSTER_ARRAY); do \
+		for T in $(THREAD_ARRAY); do \
+			echo "Running with CLUSTERS=$$C, THREADS=$$T"; \
+			$(RUN) -n $$C $(BIN) $$T; \
+		done; \
 	done
 
 plot:
@@ -51,6 +51,8 @@ setup:
 	mkdir -p data
 	mkdir -p images
 	mkdir -p images/base
+	touch data/values/time_data.csv
+	touch data/values/speedup_data.csv
 	@echo "Done."
 
 .PHONY: setup run execute build clean plot
