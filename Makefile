@@ -17,31 +17,26 @@ CFLAGS = $(OMP_FLAGS) $(ERROR_FLAGS) $(PERFORMANCE_FLAGS)
 SRC = $(shell find src -name "*.c")
 BIN = bin/mpi_omp_convolution
 
-run: setup build execute
-
 build:
 	$(CC) $(CFLAGS) $(SRC) -o $(BIN)
 
-execute:
-	$(RUN) -n $(CLUSTERS) $(BIN) -t $(THREADS) -d
-
 run_serial: setup build
-	$(BIN) -s
+	$(BIN) -serial
 
 run_multithreaded: setup build
-	$(BIN) -t $(THREADS) -m
+	$(BIN) -threads $(THREADS) -multithreaded
 
 run_distributed: setup build
-	$(RUN) -n $(CLUSTERS) $(BIN) -t $(THREADS) -d
+	$(RUN) -n $(CLUSTERS) $(BIN) -threads $(THREADS) -distributed
 
 run_shared: setup build
-	$(RUN) -n $(CLUSTERS) $(BIN) -t $(THREADS) -h
+	$(RUN) -n $(CLUSTERS) $(BIN) -threads $(THREADS) -shared
 
 run_task_pool: setup build
-	$(RUN) -n $(CLUSTERS) $(BIN) -t $(THREADS) -p
+	$(RUN) -n $(CLUSTERS) $(BIN) -threads $(THREADS) -task_pool
 
 run_all: setup build
-	$(RUN) -n $(CLUSTERS) $(BIN) -t $(THREADS) -a
+	$(RUN) -n $(CLUSTERS) $(BIN) -threads $(THREADS) -all
 
 CLUSTER_ARRAY = 2 4 8
 THREAD_ARRAY = 2 4 8
@@ -59,23 +54,21 @@ plot:
 
 clean:
 	find images -mindepth 1 -maxdepth 1 -not -name 'base' -exec rm -rf {} +
+	rm -rf data/chronos
+	rm -rf data/speedups
+	rm -rf data/plots
 	rm -f $(BIN)
 
 setup:
 	@echo "Setting up the project..."
-	mkdir -p docs
-	mkdir -p src
 	mkdir -p bin
-	mkdir -p data
+	mkdir -p src
+	mkdir -p docs
 	mkdir -p images
 	mkdir -p images/base
-	touch data/values/time_data.csv
-	touch data/values/serial_data.csv
-	touch data/values/multithreaded_data.csv
-	touch data/values/distributed_data.csv
-	touch data/values/shared_data.csv
-	touch data/values/task_pool_data.csv
-	touch data/values/speedup_data.csv
+	mkdir -p data
+	mkdir -p data/chronos
+	mkdir -p data/speedups
 	@echo "Done."
 
-.PHONY: setup run execute build clean plot run_serial run_multithreaded run_distributed run_shared run_task_pool run_all
+.PHONY: setup execute build clean plot run_serial run_multithreaded run_distributed run_shared run_task_pool run_all

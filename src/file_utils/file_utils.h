@@ -11,7 +11,7 @@
  *         - ERR_FILE_OPEN: Could not open file
  *         - ERR_FILE_IO: Error seeking or telling file position
  */
-app_error init_benchmark_csv(const char *filename);
+app_error init_benchmark_csv(const char *filename, const char *header);
 
 /**
  * Appends a benchmark result row to the CSV file.
@@ -34,6 +34,10 @@ app_error append_benchmark_result(const char *filename, int pixel_count,
                                   double serial_time, double multithreaded_time,
                                   double distributed_time, double shared_time,
                                   double task_pool_time);
+
+app_error append_single_benchmark_result(const char *filename, int pixel_count,
+                                         int kernel_size, int clusters,
+                                         int threads, double time);
 
 /**
  * Recursively creates all directories specified in the given path.

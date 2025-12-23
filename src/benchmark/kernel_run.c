@@ -31,21 +31,20 @@ app_error create_directories(void) {
 
     // Create parallel multithreaded test folder
     snprintf(path, PATH_MAX, "%s/%s/%s", IMAGES_FOLDER, dir,
-             PARALLEL_MULTITHREADED_FOLDER);
+             MULTITHREADED_FOLDER);
     err = create_directory(path);
     if (err)
       return err;
 
     // Create parallel distributed test folder
     snprintf(path, PATH_MAX, "%s/%s/%s", IMAGES_FOLDER, dir,
-             PARALLEL_DISTRIBUTED_FS_FOLDER);
+             DISTRIBUTED_FOLDER);
     err = create_directory(path);
     if (err)
       return err;
 
     // Create parallel shared test folder
-    snprintf(path, PATH_MAX, "%s/%s/%s", IMAGES_FOLDER, dir,
-             PARALLEL_SHARED_FS_FOLDER);
+    snprintf(path, PATH_MAX, "%s/%s/%s", IMAGES_FOLDER, dir, SHARED_FOLDER);
     err = create_directory(path);
     if (err)
       return err;

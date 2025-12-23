@@ -28,8 +28,8 @@ app_error run_benchmark_parallel_multithreaded(void) {
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
   if (rank == 0) {
     printf("\n--- Starting Parallel Benchmark (Multithreaded) ---\n");
-    return run_all_files(PARALLEL_MULTITHREADED_FOLDER,
-                         convolve_parallel_multithreaded, benchmark_data[1]);
+    return run_all_files(MULTITHREADED_FOLDER, convolve_parallel_multithreaded,
+                         benchmark_data[1]);
   }
   return SUCCESS;
 }
@@ -41,7 +41,7 @@ app_error run_benchmark_parallel_distributed_fs(void) {
     printf("\n--- Starting Parallel Benchmark (Distributed Filesystem) ---\n");
   }
   // All ranks participate in Distributed FS benchmark
-  return run_all_files(PARALLEL_DISTRIBUTED_FS_FOLDER,
+  return run_all_files(DISTRIBUTED_FOLDER,
                        convolve_parallel_distributed_filesystem,
                        benchmark_data[2]);
 }
@@ -51,8 +51,7 @@ app_error run_benchmark_parallel_shared_fs(void) {
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
   if (rank == 0) {
     printf("\n--- Starting Parallel Benchmark (Shared Filesystem) ---\n");
-    return run_all_files(PARALLEL_SHARED_FS_FOLDER,
-                         convolve_parallel_shared_filesystem,
+    return run_all_files(SHARED_FOLDER, convolve_parallel_shared_filesystem,
                          benchmark_data[3]);
   }
   return SUCCESS;
@@ -129,37 +128,24 @@ app_error run_verification(BenchmarkConfig config) {
         }
       }
 
-      if (config.run_multithreaded) {
-        err = verify_implementation(kernel_name, PARALLEL_MULTITHREADED_FOLDER,
-                                    img_name, img_serial, &mismatches);
-        if (err)
-          fprintf(stderr, "%s\n", get_error_string(err));
-      }
-
-      if (config.run_distributed) {
-        err = verify_implementation(kernel_name, PARALLEL_DISTRIBUTED_FS_FOLDER,
-                                    img_name, img_serial, &mismatches);
-        if (err)
-          fprintf(stderr, "%s\n", get_error_string(err));
-      }
-
-      if (config.run_shared) {
-        err = verify_implementation(kernel_name, PARALLEL_SHARED_FS_FOLDER,
-                                    img_name, img_serial, &mismatches);
-        if (err)
-          fprintf(stderr, "%s\n", get_error_string(err));
-      }
-
-      if (config.run_task_pool) {
-        err = verify_implementation(kernel_name, TASK_POOL_FOLDER, img_name,
+      if (config.run_multithreaded)
+        (void)verify_implementation(kernel_name, MULTITHREADED_FOLDER, img_name,
                                     img_serial, &mismatches);
-        if (err)
-          fprintf(stderr, "%s\n", get_error_string(err));
-      }
 
-      if (img_serial) {
+      if (config.run_distributed)
+        (void)verify_implementation(kernel_name, DISTRIBUTED_FOLDER, img_name,
+                                    img_serial, &mismatches);
+
+      if (config.run_shared)
+        (void)verify_implementation(kernel_name, SHARED_FOLDER, img_name,
+                                    img_serial, &mismatches);
+
+      if (config.run_task_pool)
+        (void)verify_implementation(kernel_name, TASK_POOL_FOLDER, img_name,
+                                    img_serial, &mismatches);
+
+      if (img_serial)
         free_BMP(img_serial);
-      }
     }
   }
 

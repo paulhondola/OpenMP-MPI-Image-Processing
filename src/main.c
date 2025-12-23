@@ -12,7 +12,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define DEFAULT_THREAD_COUNT 10
+#define DEFAULT_THREAD_COUNT 1
 
 void print_usage(const char *prog_name) {
   printf("Usage: %s [options]\n", prog_name);
@@ -44,24 +44,24 @@ void parse_args(int argc, char **argv, BenchmarkConfig *config) {
     if (strcmp(argv[i], "--help") == 0) {
       print_usage(argv[0]);
       exit(0);
-    } else if (strcmp(argv[i], "-t") == 0 && i + 1 < argc) {
+    } else if (strcmp(argv[i], "-threads") == 0 && i + 1 < argc) {
       config->omp_threads = atoi(argv[++i]);
-    } else if (strcmp(argv[i], "-s") == 0) {
+    } else if (strcmp(argv[i], "-serial") == 0) {
       config->run_serial = 1;
       flags_set = true;
-    } else if (strcmp(argv[i], "-m") == 0) {
+    } else if (strcmp(argv[i], "-multithreaded") == 0) {
       config->run_multithreaded = 1;
       flags_set = true;
-    } else if (strcmp(argv[i], "-d") == 0) {
+    } else if (strcmp(argv[i], "-distributed") == 0) {
       config->run_distributed = 1;
       flags_set = true;
-    } else if (strcmp(argv[i], "-h") == 0) { // -h for shared (parallel_shared)
+    } else if (strcmp(argv[i], "-shared") == 0) {
       config->run_shared = 1;
       flags_set = true;
-    } else if (strcmp(argv[i], "-p") == 0) { // -p for task pool
+    } else if (strcmp(argv[i], "-task_pool") == 0) {
       config->run_task_pool = 1;
       flags_set = true;
-    } else if (strcmp(argv[i], "-a") == 0) {
+    } else if (strcmp(argv[i], "-all") == 0) {
       config->run_serial = 1;
       config->run_multithreaded = 1;
       config->run_distributed = 1;
@@ -75,14 +75,10 @@ void parse_args(int argc, char **argv, BenchmarkConfig *config) {
     }
   }
 
-  // If no benchmark flags set, default to distributed (original behavior seemed
-  // to default to something or was manual) Or maybe error? For now, let's say
-  // if none set, run nothing or print guidance? Previous behavior was
-  // controlled by compile flags. If no flags are provided, maybe run all? Or
-  // just Distributed as that was the active one in the file.
+  // exit if no flags set
   if (!flags_set) {
-    // Default to distributed as per previous default behavior in main
-    config->run_distributed = 1;
+    print_usage(argv[0]);
+    exit(1);
   }
 }
 
@@ -168,18 +164,18 @@ app_error write_benchmark_results(int comm_size, BenchmarkConfig config) {
   // Initialize necessary CSV files
   app_error err = SUCCESS;
   if (run_all) {
-    err = init_benchmark_csv(CSV_FILE);
+    err = init_benchmark_csv(MULTI_RUN_CSV_FILE, MULTI_RUN_CSV_HEADER);
   } else {
     if (config.run_serial)
-      err = init_benchmark_csv(SERIAL_CSV_FILE);
+      err = init_benchmark_csv(SERIAL_CSV_FILE, SINGLE_RUN_CSV_HEADER);
     if (!err && config.run_multithreaded)
-      err = init_benchmark_csv(MULTITHREADED_CSV_FILE);
+      err = init_benchmark_csv(MULTITHREADED_CSV_FILE, SINGLE_RUN_CSV_HEADER);
     if (!err && config.run_distributed)
-      err = init_benchmark_csv(DISTRIBUTED_CSV_FILE);
+      err = init_benchmark_csv(DISTRIBUTED_CSV_FILE, SINGLE_RUN_CSV_HEADER);
     if (!err && config.run_shared)
-      err = init_benchmark_csv(SHARED_CSV_FILE);
+      err = init_benchmark_csv(SHARED_CSV_FILE, SINGLE_RUN_CSV_HEADER);
     if (!err && config.run_task_pool)
-      err = init_benchmark_csv(TASK_POOL_CSV_FILE);
+      err = init_benchmark_csv(TASK_POOL_CSV_FILE, SINGLE_RUN_CSV_HEADER);
   }
 
   if (err != SUCCESS) {
@@ -233,22 +229,42 @@ app_error write_benchmark_results(int comm_size, BenchmarkConfig config) {
   }
 
         if (run_all) {
-          APPEND_RESULT(CSV_FILE);
+          APPEND_RESULT(MULTI_RUN_CSV_FILE);
         } else {
           if (config.run_serial) {
-            APPEND_RESULT(SERIAL_CSV_FILE);
+            err = append_single_benchmark_result(
+                SERIAL_CSV_FILE, width * height, CONV_KERNELS[k].size,
+                comm_size, config.omp_threads, serial_time);
+            if (err != SUCCESS)
+              return err;
           }
           if (config.run_multithreaded) {
-            APPEND_RESULT(MULTITHREADED_CSV_FILE);
+            err = append_single_benchmark_result(
+                MULTITHREADED_CSV_FILE, width * height, CONV_KERNELS[k].size,
+                comm_size, config.omp_threads, multithreaded_time);
+            if (err != SUCCESS)
+              return err;
           }
           if (config.run_distributed) {
-            APPEND_RESULT(DISTRIBUTED_CSV_FILE);
+            err = append_single_benchmark_result(
+                DISTRIBUTED_CSV_FILE, width * height, CONV_KERNELS[k].size,
+                comm_size, config.omp_threads, distributed_time);
+            if (err != SUCCESS)
+              return err;
           }
           if (config.run_shared) {
-            APPEND_RESULT(SHARED_CSV_FILE);
+            err = append_single_benchmark_result(
+                SHARED_CSV_FILE, width * height, CONV_KERNELS[k].size,
+                comm_size, config.omp_threads, shared_time);
+            if (err != SUCCESS)
+              return err;
           }
           if (config.run_task_pool) {
-            APPEND_RESULT(TASK_POOL_CSV_FILE);
+            err = append_single_benchmark_result(
+                TASK_POOL_CSV_FILE, width * height, CONV_KERNELS[k].size,
+                comm_size, config.omp_threads, task_pool_time);
+            if (err != SUCCESS)
+              return err;
           }
         }
 
@@ -261,7 +277,7 @@ app_error write_benchmark_results(int comm_size, BenchmarkConfig config) {
   }
 
   if (run_all) {
-    printf("\nBenchmark results written to %s\n", CSV_FILE);
+    printf("\nBenchmark results written to %s\n", MULTI_RUN_CSV_FILE);
   } else {
     printf("\nBenchmark results written to separate files based on executed "
            "modes.\n");
