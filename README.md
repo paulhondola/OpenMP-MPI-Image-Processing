@@ -1,4 +1,4 @@
-# OpenMP & MPI Image Processing
+# MPI & OpenMP Distributed and Multithreaded Image Processing
 
 This project implements efficient image processing kernels using a hybrid parallelization approach. The core task is to apply various convolution kernels (such as Edge Detection, Gaussian Blur, and Sharpening) to large BMP images.
 
