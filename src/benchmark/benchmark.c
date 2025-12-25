@@ -77,6 +77,7 @@ app_error verify_implementation(const char *kernel_dir, const char *impl_folder,
            impl_folder, img_name);
 
   Image *img_parallel = NULL;
+
   app_error err = read_BMP(&img_parallel, path);
   if (err) {
     fprintf(stderr, "\tError reading %s output: %s\n", impl_folder, path);
@@ -85,6 +86,7 @@ app_error verify_implementation(const char *kernel_dir, const char *impl_folder,
   }
 
   err = check_images_match(img_serial, img_parallel);
+
   if (err) {
     fprintf(stderr, RED "\tMismatch found in kernel %s (%s)\n" RESET,
             kernel_dir, impl_folder);
@@ -94,6 +96,44 @@ app_error verify_implementation(const char *kernel_dir, const char *impl_folder,
   }
 
   free_BMP(img_parallel);
+  return err;
+}
+
+app_error verify_implmentations(BenchmarkConfig config, const char *kernel_dir,
+                                const char *img_name, int *mismatches) {
+  char serial_path[PATH_MAX];
+
+  snprintf(serial_path, PATH_MAX, "%s/%s/%s/%s", IMAGES_FOLDER, kernel_dir,
+           SERIAL_FOLDER, img_name);
+
+  Image *img_serial = NULL;
+
+  app_error err = read_BMP(&img_serial, serial_path);
+
+  if (err) {
+    fprintf(stderr, "\tError reading serial output: %s | ERROR CODE: %s\n",
+            serial_path, get_error_string(err));
+    // If we can't read serial output, we can't verify anything
+    return err;
+  }
+
+  if (config.run_multithreaded)
+    (void)verify_implementation(kernel_dir, MULTITHREADED_FOLDER, img_name,
+                                img_serial, mismatches);
+
+  if (config.run_distributed)
+    (void)verify_implementation(kernel_dir, DISTRIBUTED_FOLDER, img_name,
+                                img_serial, mismatches);
+
+  if (config.run_shared)
+    (void)verify_implementation(kernel_dir, SHARED_FOLDER, img_name, img_serial,
+                                mismatches);
+
+  if (config.run_task_pool)
+    (void)verify_implementation(kernel_dir, TASK_POOL_FOLDER, img_name,
+                                img_serial, mismatches);
+
+  free_BMP(img_serial);
   return err;
 }
 
@@ -107,45 +147,11 @@ app_error run_verification(BenchmarkConfig config) {
     printf("\nVerifying file: %s\n", img_name);
 
     for (int k = 0; k < KERNEL_TYPES; k++) {
-      const char *kernel_name = CONV_KERNELS[k].name;
-      char serial_path[PATH_MAX];
-
-      snprintf(serial_path, PATH_MAX, "%s/%s/%s/%s", IMAGES_FOLDER, kernel_name,
-               SERIAL_FOLDER, img_name);
-
-      Image *img_serial = NULL;
-
-      // Only read serial image if we really need to verify something
-      if (config.run_multithreaded || config.run_distributed ||
-          config.run_shared || config.run_task_pool) {
-        err = read_BMP(&img_serial, serial_path);
-        if (err) {
-          fprintf(stderr,
-                  "\tError reading serial output: %s | ERROR CODE: %s\n",
-                  serial_path, get_error_string(err));
-          // If we can't read serial output, we can't verify anything
-          return err;
-        }
+      err = verify_implmentations(config, CONV_KERNELS[k].name, img_name,
+                                  &mismatches);
+      if (err) {
+        return err;
       }
-
-      if (config.run_multithreaded)
-        (void)verify_implementation(kernel_name, MULTITHREADED_FOLDER, img_name,
-                                    img_serial, &mismatches);
-
-      if (config.run_distributed)
-        (void)verify_implementation(kernel_name, DISTRIBUTED_FOLDER, img_name,
-                                    img_serial, &mismatches);
-
-      if (config.run_shared)
-        (void)verify_implementation(kernel_name, SHARED_FOLDER, img_name,
-                                    img_serial, &mismatches);
-
-      if (config.run_task_pool)
-        (void)verify_implementation(kernel_name, TASK_POOL_FOLDER, img_name,
-                                    img_serial, &mismatches);
-
-      if (img_serial)
-        free_BMP(img_serial);
     }
   }
 
