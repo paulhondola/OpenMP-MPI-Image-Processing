@@ -7,9 +7,11 @@ This project implements efficient image processing kernels using a hybrid parall
 The primary goal of this project is to demonstrate and benchmark high-performance computing techniques in C. It compares the performance of:
 
 1.  **Serial Execution**: Baseline implementation on a single core.
-2.  **OpenMP (Multithreaded)**: Shared-memory parallelism utilizing multiple threads on a single node.
-3.  **MPI (Distributed)**: Distributed-memory parallelism splitting the workload across multiple processes (or nodes).
-4.  **Hybrid (MPI + OpenMP)**: Combining both approaches—using MPI to distribute work across nodes and OpenMP to parallelize work within each node.
+2.  **Simple Multithreaded**: Shared-memory parallelism utilizing OpenMP threads.
+3.  **Hybrid (MPI + OpenMP)**: Combining both approaches in three distinct configurations:
+    - **Message Passing**: Distributed-memory approach.
+    - **Shared Memory**: Parallelism via shared memory access.
+    - **Task Pool**: Dynamic task scheduling for load balancing.
 
 ### The Task: Convolution
 
