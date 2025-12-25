@@ -1,167 +1,162 @@
-# OpenMP & MPI Image Processing
+# MPI & OpenMP Distributed and Multithreaded Image Processing
 
-This project implements image processing kernels (convolution) using a serial and hybrid parallelization approach with OpenMP and MPI. It benchmarks various convolution kernels (Ridge, Edge, Sharpen, BoxBlur, Gaussian, Unsharp) on BMP images.
+This project implements efficient image processing kernels using a hybrid parallelization approach. The core task is to apply various convolution kernels (such as Edge Detection, Gaussian Blur, and Sharpening) to large BMP images.
+
+## Project Overview
+
+The primary goal of this project is to demonstrate and benchmark high-performance computing techniques in C. It compares the performance of:
+
+1.  **Serial Execution**: Baseline implementation on a single core.
+2.  **Simple Multithreaded**: Shared-memory parallelism utilizing OpenMP threads.
+3.  **Hybrid (MPI + OpenMP)**: Combining both approaches in three distinct configurations:
+    - **Message Passing**: Distributed-memory approach.
+    - **Shared Memory**: Parallelism via shared memory access.
+    - **Task Pool**: Dynamic task scheduling for load balancing.
+
+### The Task: Convolution
+
+Convolution is a mathematical operation fundamental to many image processing techniques. It involves sliding a small matrix (the kernel) over the image pixels to calculate new pixel values based on their neighbors. This operation is computationally intensive and highly parallelizable, making it an excellent candidate for performance optimization studies.
+
+This project implements several standard kernels:
+*   **Ridge Detection**: Highlights significant changes in intensity.
+*   **Edge Detection**: Identifies boundaries within the image.
+*   **Sharpen**: Enhances the contrast of edges.
+*   **Box Blur**: Simple averaging blur.
+*   **Gaussian Blur**: Weighted averaging blur for noise reduction.
+*   **Unsharp Mask**: Enhances image details.
 
 ## Prerequisites
 
-- **GCC/Clang**: The Makefile automatically handles OpenMP flags.
-    - **macOS**: Detects and directs to `/opt/homebrew/opt/libomp`.
-    - **Linux**: Uses standard `-fopenmp`.
+- **Meson**: The primary build system.
+- **Ninja**: Fast build system backend (usually installed with Meson).
 - **MPI**: A message passing interface implementation (e.g., MPICH, OpenMPI).
-- **Make**: For build automation.
+- **GCC/Clang**: Compiler with OpenMP support.
 
 ## Project Structure
 
 ```
-├── Makefile        # Compilation, setup, and execution commands
-├── bin             # Output directory for compiled binary
+├── meson.build     # Build configuration
+├── build           # Output directory (created by build)
 ├── data            # Output directory
 │   ├── values      # CSV files (time_data.csv)
 │   └── plots       # Generated plots
-├── docs            # Documentation files
 ├── images          # Input and output directory for BMP images
 │   ├── base        # Place input BMP files here
-│   └── [kernel]    # Output directories for each kernel (e.g., ridge/serial|parallel)
+│   └── [kernel]    # Output directories (automatically created)
 └── src             # Source code
-    ├── benchmark   # Benchmarking logic and kernel definitions
-    ├── bmp         # BMP file I/O (read/write)
-    ├── convolution # Convolution implementation (serial vs hybrid parallel)
-    ├── errors      # Error handling (app_error enum)
-    ├── file_utils  # File and directory utilities (mkdir -p execution)
-    ├── constants   # Constant definitions (kernel weights and image file paths)
-    └── main.c      # Entry point
 ```
 
 ## Setup
 
-Before running the project, you must create the necessary directory structure for artifacts and images.
+Initialize the build directory:
 
 ```bash
-make setup
+meson setup build
 ```
 
-This command initializes:
-- `bin/`, `data/`, `docs/`, `src/`
-- `images/base` (Put your source BMP images here)
-- Note: Specific output directories for every kernel are created automatically by the Make verification or can be created manually if needed.
+This will configure the project and detect your dependencies (MPI, OpenMP).
 
-## Build and Run
+## Building and Running
 
-### 1. Build and Run Hybrid Benchmark
+We use Meson `run_target`s to execute benchmarks. These targets automatically handle compilation if needed.
 
-To compile and run the full benchmark suite on the images located in `images/base`:
-
-```bash
-make run
-```
-
-This will:
-1.  **Compile** the source into `bin/main` using `mpicc`.
-2.  **Execute** via `mpirun` with default settings (10 MPI Clusters, 10 OpenMP Threads).
-3.  **Process** all images in `images/base`.
-4.  **Save** results to the appropriate `images/[kernel]/[type]` folder.
-5.  **Append** time data to the corresponding CSV file in `data/values/`:
-    *   `serial_data.csv` (Serial)
-    *   `multithreaded_data.csv` (Parallel Multithreaded)
-    *   `distributed_data.csv` (Parallel Distributed FS)
-    *   `shared_data.csv` (Parallel Shared FS)
-    *   `task_pool_data.csv` (Parallel Task Pool)
-    *   `time_data.csv` (Combined data when running ALL via `-a` or `make run_all`)
-
-### 2. Available Make Targets
-
-You can use specific Make targets to run individual benchmark modes:
+### Standard Benchmarks
 
 ```bash
 # Run Serial benchmark
-make run_serial
+meson compile -C build run_serial
 
 # Run Parallel Multithreaded benchmark
-make run_multithreaded
+meson compile -C build run_multithreaded
 
 # Run Parallel Distributed Filesystem benchmark
-make run_distributed
+meson compile -C build run_distributed
 
 # Run Parallel Shared Filesystem benchmark
-make run_shared
+meson compile -C build run_shared
 
 # Run Parallel Task Pool benchmark
-make run_task_pool
+meson compile -C build run_task_pool
 
-# Run All benchmarks
-make run_all
+# Run All benchmarks sequentially
+meson compile -C build run_all
 ```
 
-Custom `CLUSTERS` and `THREADS` can still be passed:
+### Manual Compilation
+
+If you just want to build the executable without running:
+
 ```bash
-make run_distributed CLUSTERS=4 THREADS=8
+meson compile -C build
 ```
 
-### 3. Manual Execution & Flags
+The binary will be located at `build/mpi_omp_convolution`.
 
-You can run the benchmark binary directly to control which modes are executed. This uses the new flag-based configuration system.
+### Manual Execution & Flags
+
+You can run the benchmark binary directly to control which modes are executed.
 
 ```bash
 # General syntax
-bin/mpi_omp_convolution -t <threads> [mode flags]
+build/mpi_omp_convolution -threads <threads> [mode flags]
 ```
 
-# Flags:
-# -t <n> : Set number of OpenMP threads
-# -s     : proper Serial benchmark
-# -m     : Parallel Multithreaded benchmark
-# -d     : Parallel Distributed Filesystem benchmark
-# -h     : Parallel Shared Filesystem benchmark
-# -p     : Parallel Task Pool benchmark
-# -a     : All benchmarks
-# --help : Show usage
-
-# Example: Run distributed with 4 threads
-mpirun -n 10 bin/mpi_omp_convolution -t 4 -d
-compares parallel outputs against serial outputs. You must run the Serial benchmark (`-s`) at least once to generate the reference images, otherwise verification will fail.
+**Flags:**
+*   `-threads <n>`      : Set number of OpenMP threads
+*   `-serial`           : Run Serial benchmark (required for verification)
+*   `-multithreaded`    : Run Parallel Multithreaded benchmark
+*   `-distributed`      : Run Parallel Distributed Filesystem benchmark
+*   `-shared`           : Run Parallel Shared Filesystem benchmark
+*   `-task_pool`        : Run Parallel Task Pool benchmark
+*   `-all`              : Run All benchmarks
+*   `--help`            : Show usage
 
 **Examples:**
+
 ```bash
 # Run Serial benchmark (generates reference images)
-bin/mpi_omp_convolution -s
+build/mpi_omp_convolution -serial
 
-# Run Distributed benchmark with 4 threads per rank
-mpirun -n 4 bin/mpi_omp_convolution -t 4 -d
+# Run Distributed benchmark with 4 MPI processes and 4 OpenMP threads per rank
+mpirun -n 4 build/mpi_omp_convolution -threads 4 -distributed
 
 # Run All benchmarks
-mpirun -n 4 bin/mpi_omp_convolution -t 4 -a
+mpirun -n 4 build/mpi_omp_convolution -threads 4 -all
 ```
 
-### 2. Customizing Parallelism
+> **Note:** The parallel modes verify their output against the serial output. You must run the Serial benchmark (`-serial`) at least once to generate the reference images, otherwise verification will fail.
 
-You can override the number of MPI processes (`CLUSTERS`) and OpenMP threads (`THREADS`) directly from the command line:
+## Configuration
+
+You can configure the optimization flags and the number of processes/threads directly in `meson.build`.
+
+### Optimization Flags
+The project is configured with aggressive optimization by default:
+```meson
+add_project_arguments('-O3', '-march=native', language : 'c')
+```
+
+### Process & Thread Counts
+To change the number of MPI processes or OpenMP threads used by the run targets, edit the variables at the top of `meson.build`:
+
+```meson
+# Configuration Variables
+mpi_processes = '8'
+omp_threads = '8'
+```
+
+Configuring these in `meson.build` ensures that all `run_*` commands use your desired parallelism settings.
+
+## Cleaning
+
+To clean the build artifacts:
 
 ```bash
-# Example: 4 MPI processes, 8 OpenMP threads per process
-make run CLUSTERS=4 THREADS=8
+meson compile --clean -C build
 ```
 
-### 3. Parameter Sweep
-
-To run a parameter sweep across defined cluster and thread counts (defined in Makefile as `CLUSTER_ARRAY` and `THREAD_ARRAY`):
-
+Or simply remove the build directory and re-setup if you want a fresh start:
 ```bash
-make sweep
+rm -rf build
+meson setup build
 ```
-
-### 3. Build only
-
-If you only want to compile the binary without running:
-
-```bash
-make build
-```
-
-## Clean
-
-To remove compiled binaries and all generated output images (preserving your source images in `images/base`):
-
-```bash
-make clean
-```
-

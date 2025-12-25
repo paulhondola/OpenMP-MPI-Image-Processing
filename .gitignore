@@ -1,6 +1,10 @@
 # Test images (too large to commit to github)
 images/
 
+# MESON Build & Cache
+build/
+.cache/
+
 # VSCode Settings
 .vscode/
 
