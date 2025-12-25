@@ -2,8 +2,8 @@
 #define __KERNEL_RUN_H__
 
 #include "../bmp/bmp_io.h"
-#include "../constants/files.h"
-#include "../constants/kernel.h"
+#include "../config/files.h"
+#include "../config/kernel.h"
 #include "../errors/errors.h"
 
 // Callback type for convolution functions

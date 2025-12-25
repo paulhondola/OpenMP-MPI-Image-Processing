@@ -1,7 +1,8 @@
-#ifndef __BENCHMARK_H__
-#define __BENCHMARK_H__
+#ifndef __BENCHMARK_RUN_H__
+#define __BENCHMARK_RUN_H__
 
 #include "../errors/errors.h"
+
 typedef struct {
   int omp_threads;
   unsigned int run_serial : 1;

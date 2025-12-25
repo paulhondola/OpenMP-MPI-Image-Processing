@@ -2,7 +2,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import os
 
-DATA_FILE = "data/benchmark_data.csv"
+DATA_FILE = "data/chronos/speedups_data.csv"
 OUTPUT_DIR = "data/plots"
 
 if not os.path.exists(DATA_FILE):

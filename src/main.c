@@ -1,9 +1,5 @@
-#include "benchmark/benchmark.h"
-#include "bmp/bmp_io.h"
-#include "constants/files.h"
-#include "constants/kernel.h"
-#include "errors/errors.h"
-#include "file_utils/file_utils.h"
+
+#include "benchmark/benchmark_run.h"
 #include <limits.h>
 #include <mpi.h>
 #include <omp.h>
@@ -12,7 +8,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define DEFAULT_THREAD_COUNT 10
+#define DEFAULT_THREAD_COUNT 1
 
 void print_usage(const char *prog_name) {
   printf("Usage: %s [options]\n", prog_name);
@@ -44,24 +40,24 @@ void parse_args(int argc, char **argv, BenchmarkConfig *config) {
     if (strcmp(argv[i], "--help") == 0) {
       print_usage(argv[0]);
       exit(0);
-    } else if (strcmp(argv[i], "-t") == 0 && i + 1 < argc) {
+    } else if (strcmp(argv[i], "-threads") == 0 && i + 1 < argc) {
       config->omp_threads = atoi(argv[++i]);
-    } else if (strcmp(argv[i], "-s") == 0) {
+    } else if (strcmp(argv[i], "-serial") == 0) {
       config->run_serial = 1;
       flags_set = true;
-    } else if (strcmp(argv[i], "-m") == 0) {
+    } else if (strcmp(argv[i], "-multithreaded") == 0) {
       config->run_multithreaded = 1;
       flags_set = true;
-    } else if (strcmp(argv[i], "-d") == 0) {
+    } else if (strcmp(argv[i], "-distributed") == 0) {
       config->run_distributed = 1;
       flags_set = true;
-    } else if (strcmp(argv[i], "-h") == 0) { // -h for shared (parallel_shared)
+    } else if (strcmp(argv[i], "-shared") == 0) {
       config->run_shared = 1;
       flags_set = true;
-    } else if (strcmp(argv[i], "-p") == 0) { // -p for task pool
+    } else if (strcmp(argv[i], "-task_pool") == 0) {
       config->run_task_pool = 1;
       flags_set = true;
-    } else if (strcmp(argv[i], "-a") == 0) {
+    } else if (strcmp(argv[i], "-all") == 0) {
       config->run_serial = 1;
       config->run_multithreaded = 1;
       config->run_distributed = 1;
@@ -75,14 +71,10 @@ void parse_args(int argc, char **argv, BenchmarkConfig *config) {
     }
   }
 
-  // If no benchmark flags set, default to distributed (original behavior seemed
-  // to default to something or was manual) Or maybe error? For now, let's say
-  // if none set, run nothing or print guidance? Previous behavior was
-  // controlled by compile flags. If no flags are provided, maybe run all? Or
-  // just Distributed as that was the active one in the file.
+  // exit if no flags set
   if (!flags_set) {
-    // Default to distributed as per previous default behavior in main
-    config->run_distributed = 1;
+    print_usage(argv[0]);
+    exit(1);
   }
 }
 
@@ -159,123 +151,10 @@ app_error run_benchmarks(int comm_rank, BenchmarkConfig config) {
   return err;
 }
 
-app_error write_benchmark_results(int comm_size, BenchmarkConfig config) {
-  // Determine if we are running ALL benchmarks
-  bool run_all = config.run_serial && config.run_multithreaded &&
-                 config.run_distributed && config.run_shared &&
-                 config.run_task_pool;
+#include "benchmark/benchmark_io.h"
 
-  // Initialize necessary CSV files
-  app_error err = SUCCESS;
-  if (run_all) {
-    err = init_benchmark_csv(CSV_FILE);
-  } else {
-    if (config.run_serial)
-      err = init_benchmark_csv(SERIAL_CSV_FILE);
-    if (!err && config.run_multithreaded)
-      err = init_benchmark_csv(MULTITHREADED_CSV_FILE);
-    if (!err && config.run_distributed)
-      err = init_benchmark_csv(DISTRIBUTED_CSV_FILE);
-    if (!err && config.run_shared)
-      err = init_benchmark_csv(SHARED_CSV_FILE);
-    if (!err && config.run_task_pool)
-      err = init_benchmark_csv(TASK_POOL_CSV_FILE);
-  }
-
-  if (err != SUCCESS) {
-    fprintf(stderr, "Failed to initialize CSV file(s): %s\n",
-            get_error_string(err));
-    return err;
-  }
-
-  for (int f = 0; f < BENCHMARK_FILES; f++) {
-    // Read file to get dimensions
-    char input_path[PATH_MAX];
-    snprintf(input_path, PATH_MAX, "%s/%s/%s", IMAGES_FOLDER, BASE_FOLDER,
-             files[f]);
-    Image *img = NULL;
-    if (read_BMP(&img, input_path) == SUCCESS) {
-      int width = img->width;
-      int height = img->height;
-
-      for (int k = 0; k < KERNEL_TYPES; k++) {
-        double serial_time = -1;
-        if (config.run_serial)
-          serial_time = benchmark_data[0][f][k];
-
-        double multithreaded_time = -1;
-        if (config.run_multithreaded)
-          multithreaded_time = benchmark_data[1][f][k];
-
-        double distributed_time = -1;
-        if (config.run_distributed)
-          distributed_time = benchmark_data[2][f][k];
-
-        double shared_time = -1;
-        if (config.run_shared)
-          shared_time = benchmark_data[3][f][k];
-
-        double task_pool_time = -1;
-        if (config.run_task_pool)
-          task_pool_time = benchmark_data[4][f][k];
-
-// Prepare arguments for append
-// Helper block to avoid repetition
-#define APPEND_RESULT(file)                                                    \
-  err = append_benchmark_result(file, width * height, CONV_KERNELS[k].size,    \
-                                comm_size, config.omp_threads, serial_time,    \
-                                multithreaded_time, distributed_time,          \
-                                shared_time, task_pool_time);                  \
-  if (err != SUCCESS) {                                                        \
-    fprintf(stderr, "Failed to append result to %s: %s\n", file,               \
-            get_error_string(err));                                            \
-    return err;                                                                \
-  }
-
-        if (run_all) {
-          APPEND_RESULT(CSV_FILE);
-        } else {
-          if (config.run_serial) {
-            APPEND_RESULT(SERIAL_CSV_FILE);
-          }
-          if (config.run_multithreaded) {
-            APPEND_RESULT(MULTITHREADED_CSV_FILE);
-          }
-          if (config.run_distributed) {
-            APPEND_RESULT(DISTRIBUTED_CSV_FILE);
-          }
-          if (config.run_shared) {
-            APPEND_RESULT(SHARED_CSV_FILE);
-          }
-          if (config.run_task_pool) {
-            APPEND_RESULT(TASK_POOL_CSV_FILE);
-          }
-        }
-
-#undef APPEND_RESULT
-      }
-      free_BMP(img);
-    } else {
-      fprintf(stderr, "Failed to read image %s for info\n", input_path);
-    }
-  }
-
-  if (run_all) {
-    printf("\nBenchmark results written to %s\n", CSV_FILE);
-  } else {
-    printf("\nBenchmark results written to separate files based on executed "
-           "modes.\n");
-  }
-
-  return err;
-}
-
-int main(int argc, char **argv) {
-  int comm_rank, comm_size;
-  BenchmarkConfig config;
-  init_mpi(argc, argv, &comm_rank, &comm_size, &config);
-
-  if (comm_rank == 0) {
+void print_mode(BenchmarkConfig config, int comm_size) {
+  if (comm_size == 0) {
     printf("Running with %d MPI processes and %d OpenMP threads per process\n",
            comm_size, config.omp_threads);
     if (config.run_serial)
@@ -289,6 +168,14 @@ int main(int argc, char **argv) {
     if (config.run_task_pool)
       printf("Mode: Parallel Task Pool\n");
   }
+}
+
+int main(int argc, char **argv) {
+  int comm_rank, comm_size;
+  BenchmarkConfig config;
+  init_mpi(argc, argv, &comm_rank, &comm_size, &config);
+
+  print_mode(config, comm_size);
 
   // Run all benchmarks
   app_error err = run_benchmarks(comm_rank, config);
