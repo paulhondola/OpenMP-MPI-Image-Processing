@@ -1,5 +1,5 @@
 #include "kernel_run.h"
-#include "../constants/files.h"
+#include "../config/files.h"
 #include "../file_utils/file_utils.h"
 #include <limits.h>
 #include <mpi.h>

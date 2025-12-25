@@ -1,7 +1,7 @@
 #include "benchmark.h"
 #include "../bmp/bmp_io.h"
-#include "../constants/files.h"
-#include "../constants/kernel.h"
+#include "../config/files.h"
+#include "../config/kernel.h"
 #include "../convolution/convolution.h"
 #include "kernel_run.h"
 #include <limits.h>

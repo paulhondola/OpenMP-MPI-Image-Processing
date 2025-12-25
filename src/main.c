@@ -1,7 +1,7 @@
 #include "benchmark/benchmark.h"
 #include "bmp/bmp_io.h"
-#include "constants/files.h"
-#include "constants/kernel.h"
+#include "config/files.h"
+#include "config/kernel.h"
 #include "errors/errors.h"
 #include "file_utils/file_utils.h"
 #include <limits.h>
@@ -286,12 +286,8 @@ app_error write_benchmark_results(int comm_size, BenchmarkConfig config) {
   return err;
 }
 
-int main(int argc, char **argv) {
-  int comm_rank, comm_size;
-  BenchmarkConfig config;
-  init_mpi(argc, argv, &comm_rank, &comm_size, &config);
-
-  if (comm_rank == 0) {
+void print_mode(BenchmarkConfig config, int comm_size) {
+  if (comm_size == 0) {
     printf("Running with %d MPI processes and %d OpenMP threads per process\n",
            comm_size, config.omp_threads);
     if (config.run_serial)
@@ -305,6 +301,14 @@ int main(int argc, char **argv) {
     if (config.run_task_pool)
       printf("Mode: Parallel Task Pool\n");
   }
+}
+
+int main(int argc, char **argv) {
+  int comm_rank, comm_size;
+  BenchmarkConfig config;
+  init_mpi(argc, argv, &comm_rank, &comm_size, &config);
+
+  print_mode(config, comm_size);
 
   // Run all benchmarks
   app_error err = run_benchmarks(comm_rank, config);

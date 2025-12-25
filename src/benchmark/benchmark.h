@@ -2,6 +2,7 @@
 #define __BENCHMARK_H__
 
 #include "../errors/errors.h"
+
 typedef struct {
   int omp_threads;
   unsigned int run_serial : 1;

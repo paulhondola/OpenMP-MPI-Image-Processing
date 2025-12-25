@@ -2,7 +2,7 @@
 #define __CONVOLUTION_H__
 
 #include "../bmp/bmp_io.h"
-#include "../constants/kernel.h"
+#include "../config/kernel.h"
 #include "../errors/errors.h"
 
 /**
