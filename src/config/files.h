@@ -34,4 +34,8 @@ extern const char *TASK_POOL_CSV_FILE;
 extern const char *SINGLE_RUN_CSV_HEADER;
 extern const char *MULTI_RUN_CSV_HEADER;
 
+// CSV Headers for speedup
+extern const char *SPEEDUP_CSV_FILE;
+extern const char *SPEEDUP_CSV_HEADER;
+
 #endif

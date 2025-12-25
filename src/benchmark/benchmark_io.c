@@ -11,6 +11,9 @@ app_error init_csv_files(BenchmarkConfig config, bool run_all) {
   app_error err = SUCCESS;
   if (run_all) {
     err = init_benchmark_csv(MULTI_RUN_CSV_FILE, MULTI_RUN_CSV_HEADER);
+    if (!err) {
+      err = init_benchmark_csv(SPEEDUP_CSV_FILE, SPEEDUP_CSV_HEADER);
+    }
   } else {
     if (config.run_serial)
       err = init_benchmark_csv(SERIAL_CSV_FILE, SINGLE_RUN_CSV_HEADER);
@@ -99,6 +102,38 @@ app_error log_kernel_results(int file_number, int kernel_number, int comm_size,
   return SUCCESS;
 }
 
+app_error log_speedup_results(int f, int k, int comm_size,
+                              BenchmarkConfig config, int width, int height) {
+  double serial_time = benchmark_data[0][f][k];
+  double multithreaded_time = benchmark_data[1][f][k];
+  double distributed_time = benchmark_data[2][f][k];
+  double shared_time = benchmark_data[3][f][k];
+  double task_pool_time = benchmark_data[4][f][k];
+
+  // Calculate speedups
+  // Speedup = Serial Time / Parallel Time
+  // serial_speedup is always 1.0 (baseline)
+  double serial_speedup = 1.0;
+  double multithreaded_speedup = 0.0;
+  double distributed_speedup = 0.0;
+  double shared_speedup = 0.0;
+  double task_pool_speedup = 0.0;
+
+  if (multithreaded_time > 0)
+    multithreaded_speedup = serial_time / multithreaded_time;
+  if (distributed_time > 0)
+    distributed_speedup = serial_time / distributed_time;
+  if (shared_time > 0)
+    shared_speedup = serial_time / shared_time;
+  if (task_pool_time > 0)
+    task_pool_speedup = serial_time / task_pool_time;
+
+  return append_benchmark_result(
+      SPEEDUP_CSV_FILE, width * height, CONV_KERNELS[k].size, comm_size,
+      config.omp_threads, serial_speedup, multithreaded_speedup,
+      distributed_speedup, shared_speedup, task_pool_speedup);
+}
+
 app_error write_benchmark_results(int comm_size, BenchmarkConfig config) {
   // Determine if we are running ALL benchmarks
   bool run_all = config.run_serial && config.run_multithreaded &&
@@ -126,12 +161,25 @@ app_error write_benchmark_results(int comm_size, BenchmarkConfig config) {
       for (int k = 0; k < KERNEL_TYPES; k++) {
         err =
             log_kernel_results(f, k, comm_size, config, run_all, width, height);
+
         if (err != SUCCESS) {
           fprintf(stderr,
                   "Failed to append result for file %s, kernel %d: %s\n",
                   files[f], k, get_error_string(err));
           free_BMP(img);
           return err;
+        }
+
+        if (run_all) {
+          err = log_speedup_results(f, k, comm_size, config, width, height);
+          if (err != SUCCESS) {
+            fprintf(stderr,
+                    "Failed to append speedup result for file %s, kernel %d: "
+                    "%s\n",
+                    files[f], k, get_error_string(err));
+            free_BMP(img);
+            return err;
+          }
         }
       }
       free_BMP(img);
@@ -142,6 +190,7 @@ app_error write_benchmark_results(int comm_size, BenchmarkConfig config) {
 
   if (run_all) {
     printf("\nBenchmark results written to %s\n", MULTI_RUN_CSV_FILE);
+    printf("Speedup results written to %s\n", SPEEDUP_CSV_FILE);
   } else {
     printf("\nBenchmark results written to separate files based on executed "
            "modes.\n");

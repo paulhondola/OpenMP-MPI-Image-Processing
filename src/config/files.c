@@ -17,7 +17,7 @@ const char *MULTI_RUN_CSV_HEADER =
     "Time,Distributed Time,Shared Time,Task Pool Time";
 
 // CSV Header for the speedup data file
-const char *SPEEDUP_CSV_FILE = "data/chronos/speedup_data.csv";
+const char *SPEEDUP_CSV_FILE = "data/chronos/speedups_data.csv";
 const char *SPEEDUP_CSV_HEADER =
     "Pixel Count,Kernel Size,Clusters,Threads,Serial "
     "Speedup,Multithreaded "
