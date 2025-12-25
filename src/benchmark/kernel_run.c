@@ -14,6 +14,12 @@ app_error create_directories(void) {
     return SUCCESS;
 
   char path[PATH_MAX];
+
+  // Create base images folder
+  err = create_directory(IMAGES_FOLDER);
+  if (err)
+    return err;
+
   for (int k = 0; k < NUM_KERNELS; k++) {
     const char *dir = CONV_KERNELS[k].name;
 
