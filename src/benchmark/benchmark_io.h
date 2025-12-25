@@ -2,7 +2,7 @@
 #define __BENCHMARK_IO_H__
 
 #include "../errors/errors.h"
-#include "benchmark.h"
+#include "benchmark_run.h"
 
 /**
  * @brief Writes the benchmark results to CSV file(s).

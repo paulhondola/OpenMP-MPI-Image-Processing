@@ -52,12 +52,12 @@ sweep:
 plot:
 	python3 data/plot_benchmark.py
 
-clean:
+clean_images:
 	find images -mindepth 1 -maxdepth 1 -not -name 'base' -exec rm -rf {} +
+
+clean_data:
 	rm -rf data/chronos
-	rm -rf data/speedups
 	rm -rf data/plots
-	rm -f $(BIN)
 
 setup:
 	@echo "Setting up the project..."
@@ -68,7 +68,7 @@ setup:
 	mkdir -p images/base
 	mkdir -p data
 	mkdir -p data/chronos
-	mkdir -p data/speedups
+	mkdir -p data/plots
 	@echo "Done."
 
-.PHONY: setup execute build clean plot run_serial run_multithreaded run_distributed run_shared run_task_pool run_all
+.PHONY: setup execute build clean_data clean_images plot run_serial run_multithreaded run_distributed run_shared run_task_pool run_all

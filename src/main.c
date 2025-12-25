@@ -1,5 +1,5 @@
 
-#include "benchmark/benchmark.h"
+#include "benchmark/benchmark_run.h"
 #include <limits.h>
 #include <mpi.h>
 #include <omp.h>
