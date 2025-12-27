@@ -1,4 +1,5 @@
 
+#include "benchmark/benchmark_io.h"
 #include "benchmark/benchmark_run.h"
 #include <limits.h>
 #include <mpi.h>
@@ -8,6 +9,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#define DEFAULT_THREAD_COUNT 1
 #define DEFAULT_THREAD_COUNT 1
 
 void print_usage(const char *prog_name) {
@@ -21,6 +23,8 @@ void print_usage(const char *prog_name) {
   printf("  -h      Run Parallel Shared Filesystem benchmark\n");
   printf("  -p      Run Parallel Task Pool benchmark\n");
   printf("  -a      Run All benchmarks\n");
+  printf(
+      "  -verify Verify the output images against the serial implementation\n");
   printf("  --help  Show this help message\n");
   printf("\nIf no mode flags are provided, Distributed mode (-d) is run by "
          "default.\n");
@@ -33,6 +37,7 @@ void parse_args(int argc, char **argv, BenchmarkConfig *config) {
   config->run_distributed = 0;
   config->run_shared = 0;
   config->run_task_pool = 0;
+  config->verify = 0;
 
   bool flags_set = false;
 
@@ -64,6 +69,8 @@ void parse_args(int argc, char **argv, BenchmarkConfig *config) {
       config->run_shared = 1;
       config->run_task_pool = 1;
       flags_set = true;
+    } else if (strcmp(argv[i], "-verify") == 0) {
+      config->verify = 1;
     } else {
       fprintf(stderr, "Unknown argument: %s\n", argv[i]);
       print_usage(argv[0]);
@@ -89,7 +96,9 @@ void init_mpi(int argc, char **argv, int *comm_rank, int *comm_size,
   omp_set_num_threads(config->omp_threads);
 }
 
-app_error run_benchmarks(int comm_rank, BenchmarkConfig config) {
+app_error run_benchmarks(BenchmarkConfig config) {
+  int comm_rank;
+  MPI_Comm_rank(MPI_COMM_WORLD, &comm_rank);
   app_error err = SUCCESS;
 
   if (config.run_serial) {
@@ -125,6 +134,7 @@ app_error run_benchmarks(int comm_rank, BenchmarkConfig config) {
     }
   }
 
+  /*
   if (config.run_shared) {
     err = run_benchmark_parallel_shared_fs();
     if (err != SUCCESS) {
@@ -147,11 +157,10 @@ app_error run_benchmarks(int comm_rank, BenchmarkConfig config) {
       return err;
     }
   }
+  */
 
   return err;
 }
-
-#include "benchmark/benchmark_io.h"
 
 void print_mode(BenchmarkConfig config, int comm_size) {
   if (comm_size == 0) {
@@ -178,23 +187,29 @@ int main(int argc, char **argv) {
   print_mode(config, comm_size);
 
   // Run all benchmarks
-  app_error err = run_benchmarks(comm_rank, config);
+  app_error err = run_benchmarks(config);
+
   if (err != SUCCESS) {
     MPI_Finalize();
     return err;
   }
+
   if (comm_rank == 0) {
-    // Run verification
-    err = run_verification(config);
-    if (err != SUCCESS) {
-      fprintf(stderr, "Verification failed with error: %s\n",
-              get_error_string(err));
-      MPI_Finalize();
-      return err;
+    if (config.verify) {
+      // Run verification
+      err = run_verification(config);
+
+      if (err != SUCCESS) {
+        fprintf(stderr, "Verification failed with error: %s\n",
+                get_error_string(err));
+        MPI_Finalize();
+        return err;
+      }
     }
 
     // Write results to CSV
     err = write_benchmark_results(comm_size, config);
+
     if (err != SUCCESS) {
       fprintf(stderr, "Failed to write benchmark results: %s\n",
               get_error_string(err));

@@ -43,12 +43,19 @@ This project implements several standard kernels:
 ├── images          # Input and output directory for BMP images
 │   ├── base        # Place input BMP files here
 │   └── [kernel]    # Output directories (automatically created)
+├── scripts         # Utility scripts
 └── src             # Source code
 ```
 
 ## Setup
 
-Initialize the build directory:
+First, create the necessary data and image directories:
+
+```bash
+./scripts/setup_project.sh
+```
+
+Then, initialize the build directory:
 
 ```bash
 meson setup build
@@ -146,6 +153,44 @@ omp_threads = '8'
 ```
 
 Configuring these in `meson.build` ensures that all `run_*` commands use your desired parallelism settings.
+
+## Project Utilities
+
+We provide several utility targets and scripts to help manage the project artifacts. You can run these via Meson or directly using the scripts in the `scripts/` directory.
+
+### Cleaning & Process Management
+
+| Task               | Meson Target                          | Script                      | Description                                               |
+| ------------------ | ------------------------------------- | --------------------------- | --------------------------------------------------------- |
+| **Clean Images**   | `meson compile -C build clean_images` | `./scripts/clear_images.sh` | Removes generated images in `images/` (preserves `base`). |
+| **Clean Data**     | `meson compile -C build clean_data`   | `./scripts/clear_data.sh`   | Removes generated CSV files in `data/`.                   |
+| **Kill Processes** | `meson compile -C build kill`         | `./scripts/kill_process.sh` | Kills running `mpi_omp_convolution` processes.            |
+
+### Plotting & Analysis
+
+To visualize the benchmark results, you can use the plotting script. This requires `pandas` and `matplotlib`.
+
+**Generate Plots:**
+
+```bash
+# Using Meson
+meson compile -C build plot
+
+# Using Script
+python3 scripts/plot.py
+```
+
+**Run Benchmark Sweep:**
+
+To run a comprehensive sweep of benchmarks across different cluster sizes and thread counts:
+
+```bash
+# Using Meson
+meson compile -C build run_sweep
+
+# Using Script (requires paths to mpirun and executable)
+./scripts/run_sweep.sh mpirun build/mpi_omp_convolution
+```
 
 ## Cleaning
 
