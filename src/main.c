@@ -134,6 +134,7 @@ app_error run_benchmarks(BenchmarkConfig config) {
     }
   }
 
+  /*
   if (config.run_shared) {
     err = run_benchmark_parallel_shared_fs();
     if (err != SUCCESS) {
@@ -156,6 +157,7 @@ app_error run_benchmarks(BenchmarkConfig config) {
       return err;
     }
   }
+  */
 
   return err;
 }

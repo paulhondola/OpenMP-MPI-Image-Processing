@@ -1,5 +1,5 @@
 project('MpiOmpImageProcessing', 'c',
-  version : '0.8.4',
+  version : '0.8.5',
   default_options : ['warning_level=everything', 'c_std=c99', 'optimization=3', 'b_lto=true'])
 
 cc = meson.get_compiler('c')
@@ -62,6 +62,7 @@ run_target('run_distributed',
    depends : exe
 )
 
+'''
 # Shared
 run_target('run_shared',
   command : [mpirun, '-n', mpi_processes, exe, '-threads', omp_threads, '-shared'],
@@ -73,6 +74,7 @@ run_target('run_task_pool',
   command : [mpirun, '-n', mpi_processes, exe, '-threads', omp_threads, '-task_pool'],
    depends : exe
 )
+'''
 
 # All
 run_target('run_all',
