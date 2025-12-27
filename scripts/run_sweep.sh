@@ -13,7 +13,7 @@ if [ -z "$MPIRUN" ] || [ -z "$EXE" ]; then
 fi
 
 CLUSTERS="1 2 4 8"
-THREADS="1 2 4 8"
+THREADS="2 4 8"
 
 echo "Starting Benchmark Sweep..."
 
