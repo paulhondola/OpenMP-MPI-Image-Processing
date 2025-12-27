@@ -1,4 +1,5 @@
 
+#include "benchmark/benchmark_io.h"
 #include "benchmark/benchmark_run.h"
 #include <limits.h>
 #include <mpi.h>
@@ -151,8 +152,6 @@ app_error run_benchmarks(int comm_rank, BenchmarkConfig config) {
   return err;
 }
 
-#include "benchmark/benchmark_io.h"
-
 void print_mode(BenchmarkConfig config, int comm_size) {
   if (comm_size == 0) {
     printf("Running with %d MPI processes and %d OpenMP threads per process\n",
@@ -179,13 +178,17 @@ int main(int argc, char **argv) {
 
   // Run all benchmarks
   app_error err = run_benchmarks(comm_rank, config);
+
   if (err != SUCCESS) {
     MPI_Finalize();
     return err;
   }
+
   if (comm_rank == 0) {
+
     // Run verification
     err = run_verification(config);
+
     if (err != SUCCESS) {
       fprintf(stderr, "Verification failed with error: %s\n",
               get_error_string(err));
@@ -195,6 +198,7 @@ int main(int argc, char **argv) {
 
     // Write results to CSV
     err = write_benchmark_results(comm_size, config);
+
     if (err != SUCCESS) {
       fprintf(stderr, "Failed to write benchmark results: %s\n",
               get_error_string(err));

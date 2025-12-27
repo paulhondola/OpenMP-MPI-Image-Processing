@@ -1,12 +1,10 @@
 project('MpiOmpImageProcessing', 'c',
-  version : '1.8.0',
-  default_options : ['warning_level=4', 'c_std=c99'])
+  version : '0.8.1',
+  default_options : ['warning_level=everything', 'c_std=c99', 'optimization=3', 'b_lto=true'])
 
 cc = meson.get_compiler('c')
 m_dep = cc.find_library('m', required : false)
-
-# Optimization flags
-add_project_arguments('-O3', '-march=native', '-DPROJECT_ROOT="' + meson.project_source_root() + '/"', language : 'c')
+add_project_arguments('-march=native', '-DPROJECT_ROOT="' + meson.project_source_root() + '/"', language : 'c')
 
 # Configuration Variables
 mpi_processes = '8'
@@ -85,10 +83,27 @@ run_target('run_all',
 # Clean Targets
 # Cleans all generated images except the 'base' directory
 run_target('clean_images',
-  command : ['sh', '-c', 'find ' + meson.project_source_root() + '/images -mindepth 1 -maxdepth 1 -not -name base -exec rm -rf {} +']
+  command : ['sh', meson.project_source_root() + '/scripts/clear_images.sh']
 )
 
 # Cleans all benchmark CSV data
 run_target('clean_data',
-  command : ['sh', '-c', 'rm -f ' + meson.project_source_root() + '/data/chronos/*.csv']
+  command : ['sh', meson.project_source_root() + '/scripts/clear_data.sh']
+)
+
+# Plots the data
+python3 = find_program('python3', required : true)
+run_target('plot',
+  command : [
+    python3, 
+    meson.project_source_root() + '/scripts/plot.py',
+    '--data-file', meson.project_source_root() + '/data/chronos/speedups_data.csv',
+    '--output-dir', meson.project_source_root() + '/data/plots'
+  ]
+)
+
+# Runs the sweep script
+run_target('run_sweep',
+  command : ['sh', meson.project_source_root() + '/scripts/run_sweep.sh', mpirun, exe],
+  depends : exe
 )
