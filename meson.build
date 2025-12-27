@@ -1,12 +1,12 @@
 project('MpiOmpImageProcessing', 'c',
-  version : '1.7.0',
-  default_options : ['warning_level=3', 'c_std=c99'])
+  version : '1.8.0',
+  default_options : ['warning_level=4', 'c_std=c99'])
 
 cc = meson.get_compiler('c')
 m_dep = cc.find_library('m', required : false)
 
 # Optimization flags
-add_project_arguments('-O3', '-march=native', language : 'c')
+add_project_arguments('-O3', '-march=native', '-DPROJECT_ROOT="' + meson.project_source_root() + '/"', language : 'c')
 
 # Configuration Variables
 mpi_processes = '8'
@@ -42,18 +42,15 @@ exe = executable('mpi_omp_convolution',
            install : true)
 
 # Run Targets
-# Note: 'run_target' commands are executed in the build directory by default.
-# We modify them to run from the project root using 'sh -c'.
-
 # Serial
 run_target('run_serial',
-  command : ['sh', '-c', 'cd ' + meson.project_source_root() + ' && ' + exe.full_path() + ' -serial'],
+  command : [exe, '-serial'],
   depends : exe
 )
 
 # Multithreaded
 run_target('run_multithreaded',
-  command : ['sh', '-c', 'cd ' + meson.project_source_root() + ' && ' + exe.full_path() + ' -threads ' + omp_threads + ' -multithreaded'],
+  command : [exe, '-threads', omp_threads, '-multithreaded'],
    depends : exe
 )
 
@@ -63,24 +60,35 @@ run_target('run_multithreaded',
 mpirun = find_program('mpirun', required : true)
 
 run_target('run_distributed',
-  command : ['sh', '-c', 'cd ' + meson.project_source_root() + ' && ' + mpirun.full_path() + ' -n ' + mpi_processes + ' ' + exe.full_path() + ' -threads ' + omp_threads + ' -distributed'],
+  command : [mpirun, '-n', mpi_processes, exe, '-threads', omp_threads, '-distributed'],
    depends : exe
 )
 
 # Shared
 run_target('run_shared',
-  command : ['sh', '-c', 'cd ' + meson.project_source_root() + ' && ' + mpirun.full_path() + ' -n ' + mpi_processes + ' ' + exe.full_path() + ' -threads ' + omp_threads + ' -shared'],
+  command : [mpirun, '-n', mpi_processes, exe, '-threads', omp_threads, '-shared'],
    depends : exe
 )
 
 # Task Pool
 run_target('run_task_pool',
-  command : ['sh', '-c', 'cd ' + meson.project_source_root() + ' && ' + mpirun.full_path() + ' -n ' + mpi_processes + ' ' + exe.full_path() + ' -threads ' + omp_threads + ' -task_pool'],
+  command : [mpirun, '-n', mpi_processes, exe, '-threads', omp_threads, '-task_pool'],
    depends : exe
 )
 
 # All
 run_target('run_all',
-  command : ['sh', '-c', 'cd ' + meson.project_source_root() + ' && ' + mpirun.full_path() + ' -n ' + mpi_processes + ' ' + exe.full_path() + ' -threads ' + omp_threads + ' -all'],
+  command : [mpirun, '-n', mpi_processes, exe, '-threads', omp_threads, '-all'],
    depends : exe
+)
+
+# Clean Targets
+# Cleans all generated images except the 'base' directory
+run_target('clean_images',
+  command : ['sh', '-c', 'find ' + meson.project_source_root() + '/images -mindepth 1 -maxdepth 1 -not -name base -exec rm -rf {} +']
+)
+
+# Cleans all benchmark CSV data
+run_target('clean_data',
+  command : ['sh', '-c', 'rm -f ' + meson.project_source_root() + '/data/chronos/*.csv']
 )

@@ -5,8 +5,8 @@
 #include <mpi.h>
 #include <stdio.h>
 
-// Level 0: Create directories
-app_error create_directories(void) {
+app_error create_implementation_directories(const char *kernel_dir) {
+
   int rank;
   app_error err = SUCCESS;
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
@@ -15,49 +15,37 @@ app_error create_directories(void) {
 
   char path[PATH_MAX];
 
+  // Create kernel folder
+  snprintf(path, PATH_MAX, "%s/%s", IMAGES_FOLDER, kernel_dir);
+  err = create_directory(path);
+  if (err)
+    return err;
+
+  for (int i = 0; i < CONVOLUTION_MODES; i++) {
+    snprintf(path, PATH_MAX, "%s/%s/%s", IMAGES_FOLDER, kernel_dir,
+             IMPLEMENTATION_FOLDERS[i]);
+    err = create_directory(path);
+    if (err)
+      return err;
+  }
+  return SUCCESS;
+}
+
+// Level 0: Create directories
+app_error create_directories(void) {
+  int rank;
+  app_error err = SUCCESS;
+  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+  if (rank != 0)
+    return SUCCESS;
+
   // Create base images folder
   err = create_directory(IMAGES_FOLDER);
   if (err)
     return err;
 
   for (int k = 0; k < NUM_KERNELS; k++) {
-    const char *dir = CONV_KERNELS[k].name;
-
-    // Create kernel folder
-    snprintf(path, PATH_MAX, "%s/%s", IMAGES_FOLDER, dir);
-    err = create_directory(path);
-    if (err)
-      return err;
-
-    // Create serial test folder
-    snprintf(path, PATH_MAX, "%s/%s/%s", IMAGES_FOLDER, dir, SERIAL_FOLDER);
-    err = create_directory(path);
-    if (err)
-      return err;
-
-    // Create parallel multithreaded test folder
-    snprintf(path, PATH_MAX, "%s/%s/%s", IMAGES_FOLDER, dir,
-             MULTITHREADED_FOLDER);
-    err = create_directory(path);
-    if (err)
-      return err;
-
-    // Create parallel distributed test folder
-    snprintf(path, PATH_MAX, "%s/%s/%s", IMAGES_FOLDER, dir,
-             DISTRIBUTED_FOLDER);
-    err = create_directory(path);
-    if (err)
-      return err;
-
-    // Create parallel shared test folder
-    snprintf(path, PATH_MAX, "%s/%s/%s", IMAGES_FOLDER, dir, SHARED_FOLDER);
-    err = create_directory(path);
-    if (err)
-      return err;
-
-    // Create parallel task pool test folder
-    snprintf(path, PATH_MAX, "%s/%s/%s", IMAGES_FOLDER, dir, TASK_POOL_FOLDER);
-    err = create_directory(path);
+    err = create_implementation_directories(CONV_KERNELS[k].name);
     if (err)
       return err;
   }

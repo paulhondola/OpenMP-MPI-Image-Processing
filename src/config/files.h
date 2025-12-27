@@ -20,6 +20,7 @@ extern const char *MULTITHREADED_FOLDER;
 extern const char *DISTRIBUTED_FOLDER;
 extern const char *SHARED_FOLDER;
 extern const char *TASK_POOL_FOLDER;
+extern const char *IMPLEMENTATION_FOLDERS[];
 
 // CSV Files
 extern const char *SINGLE_RUN_CSV_FILE;
