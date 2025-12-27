@@ -1,5 +1,5 @@
 project('MpiOmpImageProcessing', 'c',
-  version : '0.8.2',
+  version : '0.8.3',
   default_options : ['warning_level=everything', 'c_std=c99', 'optimization=3', 'b_lto=true'])
 
 cc = meson.get_compiler('c')
@@ -89,6 +89,11 @@ run_target('clean_images',
 # Cleans all benchmark CSV data
 run_target('clean_data',
   command : ['sh', meson.project_source_root() + '/scripts/clear_data.sh']
+)
+
+# Kills the running processes
+run_target('kill',
+  command : ['sh', meson.project_source_root() + '/scripts/kill_process.sh']
 )
 
 # Plots the data
